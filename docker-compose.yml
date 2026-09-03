@@ -1,0 +1,18 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: portaria-db
+    environment:
+      POSTGRES_DB: portaria
+      POSTGRES_USER: portaria
+      POSTGRES_PASSWORD: portaria
+      TZ: America/Sao_Paulo
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portaria -d portaria"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+volumes:
+  pgdata:

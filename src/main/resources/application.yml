@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: portaria-api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/portaria}
+    username: ${DB_USER:portaria}
+    password: ${DB_PASSWORD:portaria}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false          # obrigatorio: forca o DTO a ser montado no service
+  flyway:
+    enabled: true
+
+app:
+  qr:
+    # sem valor padrao em arquivo versionado (SPEC 7.2). Usado a partir da Etapa 4.
+    secret: ${QR_SECRET:}
+  order:
+    expiration-minutes: 15
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+springdoc:
+  swagger-ui:
+    path: /docs
