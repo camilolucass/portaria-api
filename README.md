@@ -29,5 +29,21 @@ obrigatorio a partir da Etapa 4.
 
 ## Estado
 
-Fase 1, **Etapa 1** concluida: schema, entidades, enums e repositories.
-Sem controllers, services, QR ou check-in ainda — ver secao 11 do SPEC.
+Fase 1, **Etapa 2** concluida.
+
+- Etapa 1 — schema, entidades, enums e repositories.
+- Etapa 2 — CRUD de eventos e lotes, publicacao, Bean Validation e
+  `GlobalExceptionHandler` com `ProblemDetail` (RFC 7807).
+
+Sem pedidos, QR ou check-in ainda — ver secao 11 do SPEC.
+
+## Rotas disponiveis
+
+| Metodo | Rota | |
+|---|---|---|
+| POST | `/api/v1/events` | cria em DRAFT — 201 |
+| POST | `/api/v1/events/{publicId}/publish` | DRAFT -> PUBLISHED — 200 / 409 |
+| GET | `/api/v1/events` | paginado |
+| GET | `/api/v1/events/{publicId}` | 200 / 404 |
+| POST | `/api/v1/events/{eventPublicId}/batches` | 201 / 422 |
+| GET | `/api/v1/events/{eventPublicId}/batches` | 200, com `availableQuantity` |

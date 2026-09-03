@@ -16,7 +16,7 @@ Se a tarefa pedida pertence a outra etapa, pare e diga a qual etapa ela pertence
 | 4 | `QrCodeSigner` (7.2), ZXing, `CheckinService` (7.3). TC-02 a TC-06. | `feat: qr assinado e check-in atomico` |
 | 5 | Swagger, seed `V2`, Actuator, README, GitHub Actions, Dockerfile. | — |
 
-**Status atual: Etapa 1 concluida.** Proxima: Etapa 2.
+**Status atual: Etapa 2 concluida.** Proxima: Etapa 3 (pedidos e reserva atomica).
 
 ## Fora do escopo da Fase 1 (secao 10 do SPEC)
 
@@ -48,6 +48,18 @@ por decisao do dono do projeto o build usa:
 - **Spring Boot 4.1.1** (Spring Framework 7 / Hibernate 7 — as unicas linhas com
   suporte oficial a JDK 25)
 - springdoc-openapi **3.1.0** (linha compativel com Boot 4; o `2.6.x` do SPEC e para Boot 3)
+
+Pegadinhas do Boot 4 ja resolvidas, para nao serem reintroduzidas:
+
+- `flyway-core` sozinho **nao** ativa a autoconfiguracao. Use `spring-boot-starter-flyway`.
+  Sem isso o app sobe, a migration nao roda, e o erro aparece como
+  `Schema validation: missing table [buyer]`.
+- Modulos do Testcontainers foram renomeados: `testcontainers-postgresql` e
+  `testcontainers-junit-jupiter` (nao mais `postgresql` / `junit-jupiter`).
+- `@AutoConfigureMockMvc` vive em `org.springframework.boot.webmvc.test.autoconfigure`
+  e exige `spring-boot-starter-webmvc-test`.
+- O `ObjectMapper` padrao e o do **Jackson 3** (`tools.jackson.databind`), nao o
+  `com.fasterxml.jackson.databind`.
 
 Todo o resto do SPEC vale sem alteracao. Se for pedido para voltar ao Java 21,
 troque o parent para `3.3.x`, o springdoc para `2.6.x` e `java.version` para 21.
