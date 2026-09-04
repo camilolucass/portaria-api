@@ -47,7 +47,7 @@ class TicketControllerTest extends AbstractDatabaseTest {
     void deveDevolverOIngressoComOCodigoAssinado() throws Exception {
         Ticket ticket = issuedTicket();
 
-        mockMvc.perform(get("/api/v1/tickets/{id}", ticket.getPublicId()))
+        perform(get("/api/v1/tickets/{id}", ticket.getPublicId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(ticket.getPublicId().toString()))
                 .andExpect(jsonPath("$.holderName").value("Ana Souza"))
@@ -60,14 +60,14 @@ class TicketControllerTest extends AbstractDatabaseTest {
     void deveDevolverOQrComoPng() throws Exception {
         Ticket ticket = issuedTicket();
 
-        mockMvc.perform(get("/api/v1/tickets/{id}/qr", ticket.getPublicId()))
+        perform(get("/api/v1/tickets/{id}/qr", ticket.getPublicId()))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.IMAGE_PNG));
     }
 
     @Test
     void deveDevolver404ParaIngressoInexistente() throws Exception {
-        mockMvc.perform(get("/api/v1/tickets/{id}", UUID.randomUUID()))
+        perform(get("/api/v1/tickets/{id}", UUID.randomUUID()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title").value("Ingresso nao encontrado"));
     }

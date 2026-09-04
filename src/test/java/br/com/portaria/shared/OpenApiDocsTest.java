@@ -17,7 +17,7 @@ class OpenApiDocsTest extends AbstractIntegrationTest {
 
     @Test
     void deveExporTodasAsRotasDaFase1() throws Exception {
-        mockMvc.perform(get("/v3/api-docs"))
+        perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.info.title").value("Portaria API"))
                 .andExpect(jsonPath("$.paths['/api/v1/events'].post.summary").value("Cria um evento"))
@@ -41,7 +41,7 @@ class OpenApiDocsTest extends AbstractIntegrationTest {
      */
     @Test
     void nenhumaRotaPodeFicarSemSummary() throws Exception {
-        String body = mockMvc.perform(get("/v3/api-docs"))
+        String body = perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
@@ -64,7 +64,7 @@ class OpenApiDocsTest extends AbstractIntegrationTest {
 
     @Test
     void deveExporOActuatorHealth() throws Exception {
-        mockMvc.perform(get("/actuator/health"))
+        perform(get("/actuator/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"));
     }

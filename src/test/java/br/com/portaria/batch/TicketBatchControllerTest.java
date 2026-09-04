@@ -27,7 +27,7 @@ class TicketBatchControllerTest extends AbstractIntegrationTest {
         var request = new CreateBatchRequest("1o lote", 4500, 200,
                 LocalDateTime.of(2026, 9, 10, 0, 0), LocalDateTime.of(2026, 10, 5, 23, 59));
 
-        mockMvc.perform(post("/api/v1/events/{id}/batches", eventId)
+        perform(post("/api/v1/events/{id}/batches", eventId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(request)))
                 .andExpect(status().isCreated())
@@ -43,7 +43,7 @@ class TicketBatchControllerTest extends AbstractIntegrationTest {
         var request = new CreateBatchRequest("1o lote", 0, 200,
                 LocalDateTime.of(2026, 9, 10, 0, 0), LocalDateTime.of(2026, 10, 5, 23, 59));
 
-        mockMvc.perform(post("/api/v1/events/{id}/batches", eventId)
+        perform(post("/api/v1/events/{id}/batches", eventId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(request)))
                 .andExpect(status().isBadRequest())
@@ -57,7 +57,7 @@ class TicketBatchControllerTest extends AbstractIntegrationTest {
         var request = new CreateBatchRequest("1o lote", 4500, 200,
                 LocalDateTime.of(2026, 9, 10, 0, 0), START.plusMinutes(1));
 
-        mockMvc.perform(post("/api/v1/events/{id}/batches", eventId)
+        perform(post("/api/v1/events/{id}/batches", eventId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(request)))
                 .andExpect(status().isUnprocessableEntity())
@@ -70,7 +70,7 @@ class TicketBatchControllerTest extends AbstractIntegrationTest {
         var request = new CreateBatchRequest("1o lote", 4500, 200,
                 LocalDateTime.of(2026, 10, 5, 0, 0), LocalDateTime.of(2026, 9, 10, 0, 0));
 
-        mockMvc.perform(post("/api/v1/events/{id}/batches", eventId)
+        perform(post("/api/v1/events/{id}/batches", eventId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(request)))
                 .andExpect(status().isUnprocessableEntity())
@@ -82,7 +82,7 @@ class TicketBatchControllerTest extends AbstractIntegrationTest {
         var request = new CreateBatchRequest("1o lote", 4500, 200,
                 LocalDateTime.of(2026, 9, 10, 0, 0), LocalDateTime.of(2026, 10, 5, 23, 59));
 
-        mockMvc.perform(post("/api/v1/events/{id}/batches", UUID.randomUUID())
+        perform(post("/api/v1/events/{id}/batches", UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(request)))
                 .andExpect(status().isNotFound())
@@ -97,7 +97,7 @@ class TicketBatchControllerTest extends AbstractIntegrationTest {
         createBatch(eventId, "1o lote", 4500, 200,
                 LocalDateTime.of(2026, 9, 10, 0, 0), LocalDateTime.of(2026, 9, 30, 23, 59));
 
-        mockMvc.perform(get("/api/v1/events/{id}/batches", eventId))
+        perform(get("/api/v1/events/{id}/batches", eventId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[0].name").value("1o lote"))
@@ -109,7 +109,7 @@ class TicketBatchControllerTest extends AbstractIntegrationTest {
     private String createEvent() throws Exception {
         var event = new CreateEventRequest("Festa Universitaria 2026", "Open bar",
                 "Centro de Eventos, Orleans/SC", GATE, START, END);
-        String body = mockMvc.perform(post("/api/v1/events")
+        String body = perform(post("/api/v1/events")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(event)))
                 .andExpect(status().isCreated())
@@ -120,7 +120,7 @@ class TicketBatchControllerTest extends AbstractIntegrationTest {
     private void createBatch(String eventId, String name, int priceCents, int total,
                              LocalDateTime salesStart, LocalDateTime salesEnd) throws Exception {
         var request = new CreateBatchRequest(name, priceCents, total, salesStart, salesEnd);
-        mockMvc.perform(post("/api/v1/events/{id}/batches", eventId)
+        perform(post("/api/v1/events/{id}/batches", eventId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(request)))
                 .andExpect(status().isCreated());

@@ -58,7 +58,7 @@ class CheckinTest extends AbstractDatabaseTest {
         Ticket ticket = openGateTicket();
         String code = signer.sign(ticket.getPublicId());
 
-        mockMvc.perform(post("/api/v1/checkins")
+        perform(post("/api/v1/checkins")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(checkinBody(code, "portaria-1")))
                 .andExpect(status().isOk())
@@ -81,12 +81,12 @@ class CheckinTest extends AbstractDatabaseTest {
         Ticket ticket = openGateTicket();
         String code = signer.sign(ticket.getPublicId());
 
-        mockMvc.perform(post("/api/v1/checkins")
+        perform(post("/api/v1/checkins")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(checkinBody(code, "portaria-2")))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(post("/api/v1/checkins")
+        perform(post("/api/v1/checkins")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(checkinBody(code, "portaria-1")))
                 .andExpect(status().isConflict())
@@ -103,7 +103,7 @@ class CheckinTest extends AbstractDatabaseTest {
         String code = signer.sign(ticket.getPublicId());
         String tampered = flipLastCharacter(code);
 
-        mockMvc.perform(post("/api/v1/checkins")
+        perform(post("/api/v1/checkins")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(checkinBody(tampered, "portaria-1")))
                 .andExpect(status().isUnprocessableEntity())
@@ -122,7 +122,7 @@ class CheckinTest extends AbstractDatabaseTest {
         // codigo perfeitamente assinado, so que para um UUID que nao existe
         String code = signer.sign(UUID.randomUUID());
 
-        mockMvc.perform(post("/api/v1/checkins")
+        perform(post("/api/v1/checkins")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(checkinBody(code, "portaria-1")))
                 .andExpect(status().isUnprocessableEntity())
@@ -132,7 +132,7 @@ class CheckinTest extends AbstractDatabaseTest {
 
     @Test
     void deveRecusarCodigoSemAssinaturaComAMesmaMensagem() throws Exception {
-        mockMvc.perform(post("/api/v1/checkins")
+        perform(post("/api/v1/checkins")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(checkinBody(UUID.randomUUID().toString(), "portaria-1")))
                 .andExpect(status().isUnprocessableEntity())
@@ -149,7 +149,7 @@ class CheckinTest extends AbstractDatabaseTest {
                 ticketRepository, "12345678900");
         String code = signer.sign(ticket.getPublicId());
 
-        mockMvc.perform(post("/api/v1/checkins")
+        perform(post("/api/v1/checkins")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(checkinBody(code, "portaria-1")))
                 .andExpect(status().isUnprocessableEntity())
@@ -168,7 +168,7 @@ class CheckinTest extends AbstractDatabaseTest {
                 ticketRepository, "12345678900");
         String code = signer.sign(ticket.getPublicId());
 
-        mockMvc.perform(post("/api/v1/checkins")
+        perform(post("/api/v1/checkins")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(checkinBody(code, "portaria-1")))
                 .andExpect(status().isConflict())

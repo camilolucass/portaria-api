@@ -19,7 +19,8 @@ public abstract class AbstractDatabaseTest extends AbstractIntegrationTest {
     @AfterEach
     void cleanDatabase() {
         jdbcTemplate.execute("""
-                TRUNCATE ticket, order_holder, purchase_order, ticket_batch, event, buyer
+                TRUNCATE ticket, order_holder, purchase_order, ticket_batch, event, buyer,
+                         user_role, app_user
                 RESTART IDENTITY CASCADE
                 """);
     }

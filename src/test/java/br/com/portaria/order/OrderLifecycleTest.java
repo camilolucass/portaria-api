@@ -52,7 +52,7 @@ class OrderLifecycleTest extends AbstractDatabaseTest {
         TicketBatch batch = batch(10);
         var request = OrderTestFixtures.orderFor(batch, 2, "12345678900");
 
-        mockMvc.perform(post("/api/v1/orders")
+        perform(post("/api/v1/orders")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(request)))
                 .andExpect(status().isCreated())
@@ -71,7 +71,7 @@ class OrderLifecycleTest extends AbstractDatabaseTest {
         TicketBatch batch = batch(1);
         var request = OrderTestFixtures.orderFor(batch, 2, "12345678900");
 
-        mockMvc.perform(post("/api/v1/orders")
+        perform(post("/api/v1/orders")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(request)))
                 .andExpect(status().isConflict())
@@ -93,7 +93,7 @@ class OrderLifecycleTest extends AbstractDatabaseTest {
                 new HolderRequest("Titular 3", null));
         var request = new CreateOrderRequest(batch.getPublicId(), 2, buyer, holders);
 
-        mockMvc.perform(post("/api/v1/orders")
+        perform(post("/api/v1/orders")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(request)))
                 .andExpect(status().isBadRequest())
@@ -111,7 +111,7 @@ class OrderLifecycleTest extends AbstractDatabaseTest {
         TicketBatch batch = batch(10);
         var created = orderService.create(OrderTestFixtures.orderFor(batch, 3, "12345678900"));
 
-        mockMvc.perform(post("/api/v1/orders/{id}/pay", created.id()))
+        perform(post("/api/v1/orders/{id}/pay", created.id()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PAID"))
                 .andExpect(jsonPath("$.paidAt").isNotEmpty())
@@ -139,7 +139,7 @@ class OrderLifecycleTest extends AbstractDatabaseTest {
         var created = orderService.create(OrderTestFixtures.orderFor(batch, 1, "12345678900"));
         orderService.pay(created.id());
 
-        mockMvc.perform(post("/api/v1/orders/{id}/pay", created.id()))
+        perform(post("/api/v1/orders/{id}/pay", created.id()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.title").value("Situacao do pedido nao permite a operacao"));
 
@@ -149,7 +149,7 @@ class OrderLifecycleTest extends AbstractDatabaseTest {
 
     @Test
     void deveDevolver404ParaPedidoInexistente() throws Exception {
-        mockMvc.perform(get("/api/v1/orders/{id}", UUID.randomUUID()))
+        perform(get("/api/v1/orders/{id}", UUID.randomUUID()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title").value("Pedido nao encontrado"));
     }
@@ -160,7 +160,7 @@ class OrderLifecycleTest extends AbstractDatabaseTest {
         var created = orderService.create(OrderTestFixtures.orderFor(batch, 2, "12345678900"));
         orderService.pay(created.id());
 
-        mockMvc.perform(get("/api/v1/orders/{id}", created.id()))
+        perform(get("/api/v1/orders/{id}", created.id()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PAID"))
                 .andExpect(jsonPath("$.batchName").value("1o lote"))
@@ -211,7 +211,7 @@ class OrderLifecycleTest extends AbstractDatabaseTest {
         var created = orderService.create(OrderTestFixtures.orderFor(batch, 2, "12345678900"));
         orderService.pay(created.id());
 
-        mockMvc.perform(post("/api/v1/orders/{id}/cancel", created.id()))
+        perform(post("/api/v1/orders/{id}/cancel", created.id()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
 

@@ -89,7 +89,7 @@ class StatsTest extends AbstractDatabaseTest {
     }
 
     private void checkIn(UUID ticketPublicId) throws Exception {
-        mockMvc.perform(post("/api/v1/checkins")
+        perform(post("/api/v1/checkins")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(new CheckinRequest(signer.sign(ticketPublicId), "portaria-1"))))
                 .andExpect(status().isOk());
@@ -112,7 +112,7 @@ class StatsTest extends AbstractDatabaseTest {
         checkIn(paidFirst.tickets().get(0).id());
         checkIn(paidSecond.tickets().get(0).id());
 
-        mockMvc.perform(get("/api/v1/events/{id}/stats", event.getPublicId()))
+        perform(get("/api/v1/events/{id}/stats", event.getPublicId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalIssued").value(5))
                 .andExpect(jsonPath("$.totalCheckedIn").value(2))
@@ -136,7 +136,7 @@ class StatsTest extends AbstractDatabaseTest {
         var cancelled = orderService.pay(buy(batch, 2, "22222222222").id());
         orderService.cancel(cancelled.id());
 
-        mockMvc.perform(get("/api/v1/events/{id}/stats", event.getPublicId()))
+        perform(get("/api/v1/events/{id}/stats", event.getPublicId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalIssued").value(2))
                 .andExpect(jsonPath("$.totalCheckedIn").value(0))
@@ -149,7 +149,7 @@ class StatsTest extends AbstractDatabaseTest {
         Event event = openEvent();
         batch(event, "1o lote", 4500, 200);
 
-        mockMvc.perform(get("/api/v1/events/{id}/stats", event.getPublicId()))
+        perform(get("/api/v1/events/{id}/stats", event.getPublicId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalIssued").value(0))
                 .andExpect(jsonPath("$.totalCheckedIn").value(0))
@@ -162,7 +162,7 @@ class StatsTest extends AbstractDatabaseTest {
     void deveDevolverEstatisticasZeradasParaEventoSemLotes() throws Exception {
         Event event = openEvent();
 
-        mockMvc.perform(get("/api/v1/events/{id}/stats", event.getPublicId()))
+        perform(get("/api/v1/events/{id}/stats", event.getPublicId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalRevenueCents").value(0))
                 .andExpect(jsonPath("$.byBatch").isEmpty());
@@ -179,7 +179,7 @@ class StatsTest extends AbstractDatabaseTest {
         TicketBatch theirs = batch(other, "lote do outro evento", 9900, 50);
         orderService.pay(buy(theirs, 3, "22222222222").id());
 
-        mockMvc.perform(get("/api/v1/events/{id}/stats", event.getPublicId()))
+        perform(get("/api/v1/events/{id}/stats", event.getPublicId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalIssued").value(2))
                 .andExpect(jsonPath("$.totalRevenueCents").value(2 * 4500))
@@ -188,7 +188,7 @@ class StatsTest extends AbstractDatabaseTest {
 
     @Test
     void deveDevolver404ParaEventoInexistente() throws Exception {
-        mockMvc.perform(get("/api/v1/events/{id}/stats", UUID.randomUUID()))
+        perform(get("/api/v1/events/{id}/stats", UUID.randomUUID()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title").value("Evento nao encontrado"));
     }
@@ -196,7 +196,7 @@ class StatsTest extends AbstractDatabaseTest {
     /** Identificador malformado nao pode virar 500 nem vazar stack trace. */
     @Test
     void deveDevolver400ParaIdentificadorMalformado() throws Exception {
-        mockMvc.perform(get("/api/v1/events/{id}/stats", "nao-e-um-uuid"))
+        perform(get("/api/v1/events/{id}/stats", "nao-e-um-uuid"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -210,13 +210,13 @@ class StatsTest extends AbstractDatabaseTest {
         Event target = openEvent();
         batch(target, "1o lote", 4500, 200);
 
-        mockMvc.perform(get("/api/v1/events/{id}/stats", "1' OR '1'='1"))
+        perform(get("/api/v1/events/{id}/stats", "1' OR '1'='1"))
                 .andExpect(status().isBadRequest());
-        mockMvc.perform(get("/api/v1/events/{id}/stats", "'; DROP TABLE ticket; --"))
+        perform(get("/api/v1/events/{id}/stats", "'; DROP TABLE ticket; --"))
                 .andExpect(status().isBadRequest());
 
         // o evento e o schema seguem intactos
-        mockMvc.perform(get("/api/v1/events/{id}/stats", target.getPublicId()))
+        perform(get("/api/v1/events/{id}/stats", target.getPublicId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.byBatch.length()").value(1));
         assertThat(ticketRepository.count()).isZero();

@@ -5,15 +5,20 @@ import br.com.portaria.batch.TicketBatchRepository;
 import br.com.portaria.event.Event;
 import br.com.portaria.event.EventRepository;
 import br.com.portaria.event.EventStatus;
+import br.com.portaria.identity.AppUser;
+import br.com.portaria.identity.AppUserRepository;
+import br.com.portaria.identity.Role;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -38,18 +43,35 @@ public class DemoDataSeeder implements ApplicationRunner {
     private static final UUID FIRST_BATCH_ID = UUID.fromString("22222222-2222-4222-8222-222222222222");
     private static final UUID SECOND_BATCH_ID = UUID.fromString("33333333-3333-4333-8333-333333333333");
 
+    /**
+     * Senha unica para as tres contas de demonstracao. Obviamente falsa e
+     * versionada de proposito: so existe sob o perfil dev, e deixar cada
+     * desenvolvedor inventar a sua daria mais chance de alguem reaproveitar uma
+     * senha real aqui.
+     */
+    private static final String DEMO_PASSWORD = "portaria-dev-2026";
+
     private final EventRepository eventRepository;
     private final TicketBatchRepository batchRepository;
+    private final AppUserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public DemoDataSeeder(EventRepository eventRepository, TicketBatchRepository batchRepository) {
+    public DemoDataSeeder(EventRepository eventRepository,
+                          TicketBatchRepository batchRepository,
+                          AppUserRepository userRepository,
+                          PasswordEncoder passwordEncoder) {
         this.eventRepository = eventRepository;
         this.batchRepository = batchRepository;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /** Idempotente: reiniciar a aplicacao nao duplica o evento de demonstracao. */
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
+        seedUsers();
+
         if (eventRepository.findByPublicId(DEMO_EVENT_ID).isPresent()) {
             return;
         }
@@ -89,5 +111,25 @@ public class DemoDataSeeder implements ApplicationRunner {
                 .build());
 
         log.info("Perfil dev: evento de demonstracao criado com 2 lotes");
+    }
+
+    /** Uma conta por papel. Nao ha auto-cadastro: e assim que usuarios nascem. */
+    private void seedUsers() {
+        createIfAbsent("organizador@exemplo.com", "Organizadora Demo", Set.of(Role.ORGANIZER));
+        createIfAbsent("portaria@exemplo.com", "Portaria Demo", Set.of(Role.GATE));
+        createIfAbsent("comprador@exemplo.com", "Comprador Demo", Set.of(Role.BUYER));
+    }
+
+    private void createIfAbsent(String email, String name, Set<Role> roles) {
+        if (userRepository.existsByEmail(email)) {
+            return;
+        }
+        userRepository.save(AppUser.builder()
+                .name(name)
+                .email(email)
+                .passwordHash(passwordEncoder.encode(DEMO_PASSWORD))
+                .roles(java.util.EnumSet.copyOf(roles))
+                .build());
+        log.info("Perfil dev: usuario {} criado", email);
     }
 }

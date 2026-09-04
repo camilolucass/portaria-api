@@ -30,10 +30,10 @@ Java 25 · Spring Boot 4.1.1 · PostgreSQL 16 · Flyway · Spring Data JPA com
 ## Rodando
 
 ```bash
-cp .env.example .env          # e troque o QR_SECRET por um valor aleatorio
+cp .env.example .env          # e troque QR_SECRET e JWT_SECRET por valores aleatorios
 docker compose up -d          # Postgres 16 em localhost:5432
 
-export QR_SECRET=$(sed 's/^QR_SECRET=//' .env)
+export $(grep -v '^#' .env | xargs)
 SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
 ```
 
@@ -52,7 +52,7 @@ existir a chance de rodar em producao. Ele e idempotente: reiniciar nao duplica.
 ./mvnw verify
 ```
 
-60 testes, todos contra **Postgres real** via Testcontainers — o SPEC proibe H2
+72 testes, todos contra **Postgres real** via Testcontainers — o SPEC proibe H2
 inclusive em teste, porque H2 nao reproduz o comportamento concorrente que os
 casos criticos exercitam. Precisa do Docker rodando.
 
@@ -86,6 +86,12 @@ Imagem multi-stage, ~132 MB, rodando como usuario nao-root com
 | GET | `/api/v1/tickets/{publicId}/qr` | PNG 300x300 |
 | POST | `/api/v1/checkins` | 200 GRANTED / 409 / 422 |
 | GET | `/api/v1/events/{eventPublicId}/stats` | painel do organizador — 200 / 404 |
+| POST | `/api/v1/auth/login` | emite o JWT — 200 / 401 |
+
+**Toda rota de negocio exige `Authorization: Bearer <token>`.** Ficam abertas
+apenas o login, `/actuator/health` e a documentacao. Contas do perfil dev:
+`organizador@exemplo.com`, `portaria@exemplo.com` e `comprador@exemplo.com`,
+senha `portaria-dev-2026` — dado de demonstracao, nunca de producao.
 
 Erros seguem RFC 7807 (`application/problem+json`), com `title` em portugues.
 

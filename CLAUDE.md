@@ -16,7 +16,8 @@ Se a tarefa pedida pertence a outra etapa, pare e diga a qual etapa ela pertence
 | 4 | `QrCodeSigner` (7.2), ZXing, `CheckinService` (7.3). TC-02 a TC-06. | `feat: qr assinado e check-in atomico` |
 | 5 | Swagger, seed `V2`, Actuator, README, GitHub Actions, Dockerfile. | — |
 
-**Status atual: Fase 1 completa (Etapas 1 a 5 + `/stats` da secao 6).** Proximo trabalho seria a Fase 2 (Spring Security + JWT), que NAO deve ser iniciada sem pedido explicito.
+**Status atual: Fase 1 completa. Fase 2 em andamento — Etapa 1 (identidade e
+autenticacao) concluida; falta a Etapa 2 (autorizacao).** Proximo trabalho seria a Fase 2 (Spring Security + JWT), que NAO deve ser iniciada sem pedido explicito.
 
 ## Fora do escopo da Fase 1 (secao 10 do SPEC)
 
@@ -64,6 +65,24 @@ Pegadinhas do Boot 4 ja resolvidas, para nao serem reintroduzidas:
 Todo o resto do SPEC vale sem alteracao. Se for pedido para voltar ao Java 21,
 troque o parent para `3.3.x`, o springdoc para `2.6.x` e `java.version` para 21.
 
+## Fase 2 — decisoes
+
+O SPEC dedica um paragrafo a Fase 2. O que ficou decidido:
+
+| Tema | Decisao |
+|---|---|
+| Etapas | 2: (1) identidade e autenticacao; (2) toda a autorizacao |
+| Compra | `POST /orders` exige `BUYER`; o pedido pertence ao usuario autenticado |
+| Cadastro | **Nao ha auto-cadastro.** Contas nascem por seed/provisionamento |
+| Token | JWT HS256, `JWT_SECRET` no ambiente, 60 min, claim `roles` sem prefixo |
+| Senha | `DelegatingPasswordEncoder` (BCrypt com prefixo `{bcrypt}`) |
+
+**Pendencia da Etapa 2:** sem auto-cadastro e com o seeder restrito ao perfil
+dev, um deploy real sobe sem nenhum usuario e ninguem consegue logar. Resolver
+com bootstrap por variavel de ambiente, **nao** com rota de cadastro.
+
+Spring Security e **7.1.1**, nao o 6 do SPEC: e o que o Boot 4 traz.
+
 ## Desvios do SPEC decididos durante a Fase 1
 
 - **Tabela `order_holder` (migration `V2`).** A secao 6 recebe os `holders` na
@@ -96,6 +115,12 @@ troque o parent para `3.3.x`, o springdoc para `2.6.x` e `java.version` para 21.
 - **`mvn` nao remove recurso deletado de `target/classes`.** Apagar uma migration
   e rodar `verify` sem `clean` continua embutindo o arquivo antigo no jar. Ao
   mexer em migrations, rode `./mvnw clean verify`.
+- **`NimbusJwtEncoder` assume RS256.** Com chave HMAC e preciso declarar
+  `JwsHeader.with(MacAlgorithm.HS256)` nos parametros, senao todo token falha com
+  "Failed to select a JWK signing key".
+- **401 e 403 nascem fora do `GlobalExceptionHandler`.** O Spring Security
+  responde antes de existir controller; `ProblemDetailSecurityHandlers` garante
+  que essas duas respostas tambem sigam a RFC 7807.
 - **Ler o PNG do QR de volta exige `DecodeHintType.PURE_BARCODE`.** O detector
   padrao do ZXing e feito para fotos e falha em ~1,5% das imagens sinteticas,
   dependendo do conteudo. Sem a hint, o teste vira um sorteio.

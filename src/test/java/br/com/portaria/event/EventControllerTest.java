@@ -28,7 +28,7 @@ class EventControllerTest extends AbstractIntegrationTest {
 
     @Test
     void deveCriarEventoEmDraftEDevolver201() throws Exception {
-        mockMvc.perform(post("/api/v1/events")
+        perform(post("/api/v1/events")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(validRequest())))
                 .andExpect(status().isCreated())
@@ -42,7 +42,7 @@ class EventControllerTest extends AbstractIntegrationTest {
     void deveRecusarEventoSemNomeCom400() throws Exception {
         var invalid = new CreateEventRequest("  ", null, "Centro de Eventos", GATE, START, END);
 
-        mockMvc.perform(post("/api/v1/events")
+        perform(post("/api/v1/events")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(invalid)))
                 .andExpect(status().isBadRequest())
@@ -54,7 +54,7 @@ class EventControllerTest extends AbstractIntegrationTest {
     void deveRecusarEventoQueTerminaAntesDeComecarCom422() throws Exception {
         var invalid = new CreateEventRequest("Festa", null, "Centro", GATE, START, START.minusHours(1));
 
-        mockMvc.perform(post("/api/v1/events")
+        perform(post("/api/v1/events")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(invalid)))
                 .andExpect(status().isUnprocessableEntity())
@@ -65,7 +65,7 @@ class EventControllerTest extends AbstractIntegrationTest {
     void deveRecusarPortaoAbrindoDepoisDoInicioCom422() throws Exception {
         var invalid = new CreateEventRequest("Festa", null, "Centro", START.plusMinutes(1), START, END);
 
-        mockMvc.perform(post("/api/v1/events")
+        perform(post("/api/v1/events")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(invalid)))
                 .andExpect(status().isUnprocessableEntity())
@@ -76,7 +76,7 @@ class EventControllerTest extends AbstractIntegrationTest {
     void devePublicarEventoEmDraft() throws Exception {
         String id = createEvent();
 
-        mockMvc.perform(post("/api/v1/events/{id}/publish", id))
+        perform(post("/api/v1/events/{id}/publish", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PUBLISHED"));
     }
@@ -84,16 +84,16 @@ class EventControllerTest extends AbstractIntegrationTest {
     @Test
     void deveRecusarPublicacaoRepetidaCom409() throws Exception {
         String id = createEvent();
-        mockMvc.perform(post("/api/v1/events/{id}/publish", id)).andExpect(status().isOk());
+        perform(post("/api/v1/events/{id}/publish", id)).andExpect(status().isOk());
 
-        mockMvc.perform(post("/api/v1/events/{id}/publish", id))
+        perform(post("/api/v1/events/{id}/publish", id))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.title").value("Situacao do evento nao permite a operacao"));
     }
 
     @Test
     void deveDevolver404ParaEventoInexistente() throws Exception {
-        mockMvc.perform(get("/api/v1/events/{id}", UUID.randomUUID()))
+        perform(get("/api/v1/events/{id}", UUID.randomUUID()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title").value("Evento nao encontrado"));
     }
@@ -102,7 +102,7 @@ class EventControllerTest extends AbstractIntegrationTest {
     void deveBuscarEventoPeloPublicId() throws Exception {
         String id = createEvent();
 
-        mockMvc.perform(get("/api/v1/events/{id}", id))
+        perform(get("/api/v1/events/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id))
                 .andExpect(jsonPath("$.venue").value("Centro de Eventos, Orleans/SC"));
@@ -112,14 +112,14 @@ class EventControllerTest extends AbstractIntegrationTest {
     void deveListarEventosPaginado() throws Exception {
         createEvent();
 
-        mockMvc.perform(get("/api/v1/events").param("size", "5"))
+        perform(get("/api/v1/events").param("size", "5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.page.size").value(5));
     }
 
     private String createEvent() throws Exception {
-        String body = mockMvc.perform(post("/api/v1/events")
+        String body = perform(post("/api/v1/events")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(validRequest())))
                 .andExpect(status().isCreated())
