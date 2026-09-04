@@ -34,15 +34,17 @@ cp .env.example .env          # e troque o QR_SECRET por um valor aleatorio
 docker compose up -d          # Postgres 16 em localhost:5432
 
 export QR_SECRET=$(sed 's/^QR_SECRET=//' .env)
-./mvnw spring-boot:run
+SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
 ```
 
 - Swagger UI: http://localhost:8080/docs
 - OpenAPI: http://localhost:8080/v3/api-docs
 - Health: http://localhost:8080/actuator/health
 
-A migration `V3` ja deixa no banco um evento publicado e dois lotes, entao da
-para comprar um ingresso pelo Swagger sem nenhum preparo.
+O perfil `dev` cria um evento publicado e dois lotes no primeiro boot, entao da
+para comprar um ingresso pelo Swagger sem nenhum preparo. **Sem o perfil, nenhum
+dado de demonstracao e criado** — o seed nao e migration justamente para nao
+existir a chance de rodar em producao. Ele e idempotente: reiniciar nao duplica.
 
 ### Testes
 

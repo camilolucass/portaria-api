@@ -71,9 +71,11 @@ troque o parent para `3.3.x`, o springdoc para `2.6.x` e `java.version` para 21.
   PAID — e o schema da secao 4 nao tem onde guardar os titulares nesse intervalo.
   A tabela existe so para esse periodo; no pagamento cada linha vira um ticket.
   Consequencia: o seed da Etapa 5 passa a ser `V3__seed_demo.sql`.
-- **Seed `V3__seed_demo.sql` roda em qualquer banco, inclusive producao.** O SPEC
-  pede o seed como migration. Antes de um deploy real, mova-o para uma location
-  separada (`spring.flyway.locations` com perfil dev).
+- **Seed fora do Flyway.** O SPEC pede o seed como migration, mas migration roda
+  em todo banco que o Flyway alcanca, producao inclusive — e remover depois uma
+  migration ja aplicada quebra a validacao. Virou `DemoDataSeeder`, bean com
+  `@Profile("dev")` e idempotente. A `V3` foi removida e a `V4` **nao** foi
+  renumerada: nunca renumere migration ja publicada; o Flyway aceita lacunas.
 - **Pacote `stats/`, fora da secao 3.** `GET /events/{id}/stats` esta na secao 6
   (contratos da Fase 1) mas a secao 11 nao o atribuiu a nenhuma etapa, e a secao 3
   nao lista pacote para ele. Nao pode morar em `event/`: `batch` ja depende de
@@ -91,6 +93,9 @@ troque o parent para `3.3.x`, o springdoc para `2.6.x` e `java.version` para 21.
   e reivindicado antes por `OrderRepository.markExpired`, um UPDATE condicional;
   so quem afeta a linha devolve estoque. O finder ordena por id de proposito,
   para as instancias tomarem os locks na mesma sequencia.
+- **`mvn` nao remove recurso deletado de `target/classes`.** Apagar uma migration
+  e rodar `verify` sem `clean` continua embutindo o arquivo antigo no jar. Ao
+  mexer em migrations, rode `./mvnw clean verify`.
 - **Ler o PNG do QR de volta exige `DecodeHintType.PURE_BARCODE`.** O detector
   padrao do ZXing e feito para fotos e falha em ~1,5% das imagens sinteticas,
   dependendo do conteudo. Sem a hint, o teste vira um sorteio.
