@@ -16,7 +16,7 @@ Se a tarefa pedida pertence a outra etapa, pare e diga a qual etapa ela pertence
 | 4 | `QrCodeSigner` (7.2), ZXing, `CheckinService` (7.3). TC-02 a TC-06. | `feat: qr assinado e check-in atomico` |
 | 5 | Swagger, seed `V2`, Actuator, README, GitHub Actions, Dockerfile. | — |
 
-**Status atual: Fase 1 completa (Etapas 1 a 5).** Proximo trabalho seria a Fase 2 (Spring Security + JWT), que NAO deve ser iniciada sem pedido explicito.
+**Status atual: Fase 1 completa (Etapas 1 a 5 + `/stats` da secao 6).** Proximo trabalho seria a Fase 2 (Spring Security + JWT), que NAO deve ser iniciada sem pedido explicito.
 
 ## Fora do escopo da Fase 1 (secao 10 do SPEC)
 
@@ -74,6 +74,11 @@ troque o parent para `3.3.x`, o springdoc para `2.6.x` e `java.version` para 21.
 - **Seed `V3__seed_demo.sql` roda em qualquer banco, inclusive producao.** O SPEC
   pede o seed como migration. Antes de um deploy real, mova-o para uma location
   separada (`spring.flyway.locations` com perfil dev).
+- **Pacote `stats/`, fora da secao 3.** `GET /events/{id}/stats` esta na secao 6
+  (contratos da Fase 1) mas a secao 11 nao o atribuiu a nenhuma etapa, e a secao 3
+  nao lista pacote para ele. Nao pode morar em `event/`: `batch` ja depende de
+  `event`, entao `event -> batch` fecharia ciclo. O pacote `stats/` depende de
+  `event`, `batch` e `ticket`, todas as setas para dentro.
 - **Rota `POST /orders/{publicId}/cancel`.** A RN-08 e regra da Fase 1, mas a
   secao 6 nao lista endpoint de cancelamento. A regra esta em
   `OrderService.cancel` e a rota foi exposta; se o SPEC for tratado como fechado,

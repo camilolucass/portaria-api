@@ -50,7 +50,7 @@ para comprar um ingresso pelo Swagger sem nenhum preparo.
 ./mvnw verify
 ```
 
-51 testes, todos contra **Postgres real** via Testcontainers — o SPEC proibe H2
+59 testes, todos contra **Postgres real** via Testcontainers — o SPEC proibe H2
 inclusive em teste, porque H2 nao reproduz o comportamento concorrente que os
 casos criticos exercitam. Precisa do Docker rodando.
 
@@ -83,6 +83,7 @@ Imagem multi-stage, ~132 MB, rodando como usuario nao-root com
 | GET | `/api/v1/tickets/{publicId}` | 200 com o `code` assinado / 404 |
 | GET | `/api/v1/tickets/{publicId}/qr` | PNG 300x300 |
 | POST | `/api/v1/checkins` | 200 GRANTED / 409 / 422 |
+| GET | `/api/v1/events/{eventPublicId}/stats` | painel do organizador — 200 / 404 |
 
 Erros seguem RFC 7807 (`application/problem+json`), com `title` em portugues.
 
@@ -145,10 +146,34 @@ escrita, como o SPEC pede, mas nenhum teste dependia dela. O teste de
 concorrencia passou a exigir que toda recusa informe o horario, e so entao a
 mutacao quebrou.
 
+## Estatisticas e indices
+
+`GET /events/{id}/stats` resolve o painel inteiro em duas consultas agregadas —
+nada de carregar ingressos em memoria para contar em Java. A migration `V4`
+acrescenta `ticket(batch_id, status)` e `purchase_order(batch_id, status)`.
+
+Medido com 50 eventos, 100 lotes e 100 mil ingressos, mesma consulta e mesmo
+dataset, so alternando o uso dos indices:
+
+| | Tempo | Linhas lidas |
+|---|---|---|
+| sem indice (seq scan) | 17,4 ms | 100.000 |
+| com `idx_ticket_batch_status` | 2,4 ms | 1.000 por lote |
+
+A V4 tambem remove `idx_ticket_batch` da V1: era prefixo exato do novo indice
+composto, entao o planner nunca mais o escolheria e ele so custava escrita.
+
+`totalRevenueCents` e `long`, nao `int`. A secao 2 do SPEC fixa dinheiro em
+centavos `int`, o que vale para valores individuais; um agregado em `int`
+estoura em R$ 21,4 milhoes, e overflow de inteiro nao levanta erro em Java.
+
+> Esta rota devolve receita. Na Fase 2 ela e a primeira a exigir o papel
+> `ORGANIZER` — o SPEC diz que o operador de portaria nunca ve dado financeiro.
+
 ## Estado
 
-Fase 1 completa — as cinco etapas da secao 11 do SPEC, um commit por etapa.
-Os dez criterios de aceite (TC-01 a TC-10) estao cobertos.
+Fase 1 completa — as cinco etapas da secao 11 do SPEC e todos os contratos da
+secao 6, incluindo `/stats`. Os dez criterios de aceite (TC-01 a TC-10) cobertos.
 
 Proximas fases, ainda nao implementadas: Spring Security + JWT (Fase 2);
 Mercado Pago com webhook idempotente e front de portaria lendo a camera (Fase 3).
