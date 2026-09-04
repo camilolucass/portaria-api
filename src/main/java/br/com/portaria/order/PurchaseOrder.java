@@ -1,6 +1,7 @@
 package br.com.portaria.order;
 
 import br.com.portaria.batch.TicketBatch;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -11,6 +12,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,6 +22,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -66,4 +71,15 @@ public class PurchaseOrder {
 
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("holderIndex ASC")
+    @Builder.Default
+    private List<OrderHolder> holders = new ArrayList<>();
+
+    public void addHolder(OrderHolder holder) {
+        holder.setOrder(this);
+        holder.setHolderIndex(holders.size());
+        holders.add(holder);
+    }
 }

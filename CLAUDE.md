@@ -16,7 +16,7 @@ Se a tarefa pedida pertence a outra etapa, pare e diga a qual etapa ela pertence
 | 4 | `QrCodeSigner` (7.2), ZXing, `CheckinService` (7.3). TC-02 a TC-06. | `feat: qr assinado e check-in atomico` |
 | 5 | Swagger, seed `V2`, Actuator, README, GitHub Actions, Dockerfile. | — |
 
-**Status atual: Etapa 2 concluida.** Proxima: Etapa 3 (pedidos e reserva atomica).
+**Status atual: Etapa 3 concluida.** Proxima: Etapa 4 (QR assinado e check-in atomico).
 
 ## Fora do escopo da Fase 1 (secao 10 do SPEC)
 
@@ -63,6 +63,18 @@ Pegadinhas do Boot 4 ja resolvidas, para nao serem reintroduzidas:
 
 Todo o resto do SPEC vale sem alteracao. Se for pedido para voltar ao Java 21,
 troque o parent para `3.3.x`, o springdoc para `2.6.x` e `java.version` para 21.
+
+## Desvios do SPEC decididos durante a Etapa 3
+
+- **Tabela `order_holder` (migration `V2`).** A secao 6 recebe os `holders` na
+  criacao do pedido, mas a RN-07 so permite gerar o ingresso na transicao para
+  PAID — e o schema da secao 4 nao tem onde guardar os titulares nesse intervalo.
+  A tabela existe so para esse periodo; no pagamento cada linha vira um ticket.
+  Consequencia: o seed da Etapa 5 passa a ser `V3__seed_demo.sql`.
+- **Rota `POST /orders/{publicId}/cancel`.** A RN-08 e regra da Fase 1, mas a
+  secao 6 nao lista endpoint de cancelamento. A regra esta em
+  `OrderService.cancel` e a rota foi exposta; se o SPEC for tratado como fechado,
+  remover o metodo do controller basta.
 
 ## Verificacao
 

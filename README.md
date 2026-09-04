@@ -29,13 +29,32 @@ obrigatorio a partir da Etapa 4.
 
 ## Estado
 
-Fase 1, **Etapa 2** concluida.
+Fase 1, **Etapa 3** concluida.
 
 - Etapa 1 — schema, entidades, enums e repositories.
 - Etapa 2 — CRUD de eventos e lotes, publicacao, Bean Validation e
   `GlobalExceptionHandler` com `ProblemDetail` (RFC 7807).
+- Etapa 3 — pedidos com reserva atomica de estoque (P1), expiracao automatica
+  e emissao de ingressos no pagamento.
 
-Sem pedidos, QR ou check-in ainda — ver secao 11 do SPEC.
+Sem QR nem check-in ainda — ver secao 11 do SPEC.
+
+### Como o oversell e evitado (P1)
+
+A soma acontece dentro do proprio `UPDATE`, e a decisao vem do numero de linhas
+afetadas:
+
+```sql
+UPDATE ticket_batch
+   SET sold_quantity = sold_quantity + :quantity
+ WHERE id = :batchId
+   AND sold_quantity + :quantity <= total_quantity
+```
+
+Zero linhas afetadas significa lote esgotado — `409`. Sem lock explicito, sem
+`@Version`, sem retry. O `CHECK (sold_quantity <= total_quantity)` continua no
+banco como rede final: removendo a condicao do `UPDATE`, o `OrderConcurrencyTest`
+falha e o `CHECK` dispara.
 
 ## Rotas disponiveis
 
@@ -47,3 +66,7 @@ Sem pedidos, QR ou check-in ainda — ver secao 11 do SPEC.
 | GET | `/api/v1/events/{publicId}` | 200 / 404 |
 | POST | `/api/v1/events/{eventPublicId}/batches` | 201 / 422 |
 | GET | `/api/v1/events/{eventPublicId}/batches` | 200, com `availableQuantity` |
+| POST | `/api/v1/orders` | reserva estoque — 201 / 409 / 422 / 400 |
+| POST | `/api/v1/orders/{publicId}/pay` | emite os ingressos — 200 / 409 |
+| POST | `/api/v1/orders/{publicId}/cancel` | RN-08 — 200 / 409 |
+| GET | `/api/v1/orders/{publicId}` | 200 com os ingressos / 404 |
