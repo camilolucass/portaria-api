@@ -84,6 +84,17 @@ troque o parent para `3.3.x`, o springdoc para `2.6.x` e `java.version` para 21.
   `OrderService.cancel` e a rota foi exposta; se o SPEC for tratado como fechado,
   remover o metodo do controller basta.
 
+## Armadilhas ja pagas — nao reintroduzir
+
+- **O job de expiracao roda em toda instancia.** Devolver estoque direto, como a
+  leitura ingenua do 7.4 sugere, faz o saldo voltar uma vez por replica. O pedido
+  e reivindicado antes por `OrderRepository.markExpired`, um UPDATE condicional;
+  so quem afeta a linha devolve estoque. O finder ordena por id de proposito,
+  para as instancias tomarem os locks na mesma sequencia.
+- **Ler o PNG do QR de volta exige `DecodeHintType.PURE_BARCODE`.** O detector
+  padrao do ZXing e feito para fotos e falha em ~1,5% das imagens sinteticas,
+  dependendo do conteudo. Sem a hint, o teste vira um sorteio.
+
 ## Verificacao
 
 ```

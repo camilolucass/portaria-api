@@ -50,7 +50,7 @@ para comprar um ingresso pelo Swagger sem nenhum preparo.
 ./mvnw verify
 ```
 
-59 testes, todos contra **Postgres real** via Testcontainers — o SPEC proibe H2
+60 testes, todos contra **Postgres real** via Testcontainers — o SPEC proibe H2
 inclusive em teste, porque H2 nao reproduz o comportamento concorrente que os
 casos criticos exercitam. Precisa do Docker rodando.
 
@@ -140,6 +140,7 @@ conferi que o teste realmente falha:
 | tirar `AND sold_quantity + :quantity <= total_quantity` | `OrderConcurrencyTest` falha; o `CHECK` do banco dispara em 10 threads |
 | tirar `AND status = 'ISSUED'` | `CheckinConcurrencyTest` falha: **20 de 20** entram com o mesmo ingresso |
 | tirar `clearAutomatically = true` | 9 das 19 recusas saem sem informar o horario da entrada anterior |
+| devolver estoque sem reivindicar o pedido | 8 instancias do job devolvem o mesmo pedido: estoque cai de 9 para 1 em vez de 5 |
 
 A ultima mutacao passou despercebida na primeira tentativa: a linha estava
 escrita, como o SPEC pede, mas nenhum teste dependia dela. O teste de
