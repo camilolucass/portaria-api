@@ -16,7 +16,7 @@ Se a tarefa pedida pertence a outra etapa, pare e diga a qual etapa ela pertence
 | 4 | `QrCodeSigner` (7.2), ZXing, `CheckinService` (7.3). TC-02 a TC-06. | `feat: qr assinado e check-in atomico` |
 | 5 | Swagger, seed `V2`, Actuator, README, GitHub Actions, Dockerfile. | — |
 
-**Status atual: Etapa 3 concluida.** Proxima: Etapa 4 (QR assinado e check-in atomico).
+**Status atual: Etapa 4 concluida.** Proxima: Etapa 5 (acabamento: Swagger, seed V3, README, CI, Dockerfile).
 
 ## Fora do escopo da Fase 1 (secao 10 do SPEC)
 
@@ -85,5 +85,14 @@ docker compose up -d
 curl http://localhost:8080/actuator/health
 ```
 
-`QR_SECRET` (>= 32 caracteres) so passa a ser obrigatorio na Etapa 4.
-Nunca versione o valor real.
+`QR_SECRET` (>= 32 caracteres) e obrigatorio desde a Etapa 4. Fica em `.env`,
+que esta no `.gitignore` — nunca versione o valor real. Para rodar:
+
+```
+export QR_SECRET=$(sed 's/^QR_SECRET=//' .env)
+./mvnw spring-boot:run
+```
+
+Nos testes o segredo vem de `AbstractIntegrationTest` via `@DynamicPropertySource`.
+Trocar o `QR_SECRET` invalida todos os QR ja emitidos — e o comportamento
+correto, mas em producao significa reemitir ingressos.

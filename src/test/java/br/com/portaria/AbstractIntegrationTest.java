@@ -28,11 +28,15 @@ public abstract class AbstractIntegrationTest {
         POSTGRES.start();
     }
 
+    /** Segredo de teste, fixo e obviamente falso. O de producao vem de QR_SECRET. */
+    protected static final String QR_SECRET = "segredo-de-teste-com-mais-de-32-caracteres";
+
     @DynamicPropertySource
-    static void datasourceProperties(DynamicPropertyRegistry registry) {
+    static void applicationProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
+        registry.add("app.qr.secret", () -> QR_SECRET);
     }
 
     @Autowired

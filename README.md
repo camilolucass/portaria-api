@@ -36,8 +36,9 @@ Fase 1, **Etapa 3** concluida.
   `GlobalExceptionHandler` com `ProblemDetail` (RFC 7807).
 - Etapa 3 — pedidos com reserva atomica de estoque (P1), expiracao automatica
   e emissao de ingressos no pagamento.
+- Etapa 4 — QR assinado com HMAC-SHA256 (P2) e check-in atomico (P3).
 
-Sem QR nem check-in ainda — ver secao 11 do SPEC.
+Falta so a Etapa 5, de acabamento — ver secao 11 do SPEC.
 
 ### Como o oversell e evitado (P1)
 
@@ -70,3 +71,28 @@ falha e o `CHECK` dispara.
 | POST | `/api/v1/orders/{publicId}/pay` | emite os ingressos — 200 / 409 |
 | POST | `/api/v1/orders/{publicId}/cancel` | RN-08 — 200 / 409 |
 | GET | `/api/v1/orders/{publicId}` | 200 com os ingressos / 404 |
+| GET | `/api/v1/tickets/{publicId}` | 200 com o `code` assinado / 404 |
+| GET | `/api/v1/tickets/{publicId}/qr` | PNG 300x300 |
+| POST | `/api/v1/checkins` | 200 GRANTED / 409 / 422 |
+
+### Como a entrada duplicada e evitada (P3)
+
+Mesmo principio do estoque — a condicao vai dentro do `UPDATE`:
+
+```sql
+UPDATE ticket
+   SET status = 'USED', checked_in_at = :now, checked_in_by = :operator
+ WHERE id = :id AND status = 'ISSUED'
+```
+
+Entre N portarias lendo o mesmo QR ao mesmo tempo, exatamente uma recebe 1 linha
+afetada. Removendo o `AND status = 'ISSUED'`, as 20 threads do
+`CheckinConcurrencyTest` passam todas — 20 pessoas entrando com um ingresso.
+
+### Como o QR falso e evitado (P2)
+
+O conteudo do QR e `{ticket.public_id}.{HMAC-SHA256(public_id)}` em Base64
+URL-safe sem padding. A verificacao usa `MessageDigest.isEqual`, comparacao em
+tempo constante. Formato errado, assinatura errada, UUID malformado e ingresso
+inexistente devolvem **a mesma** mensagem e o mesmo 422: quem esta atacando nao
+descobre qual dos quatro errou.
