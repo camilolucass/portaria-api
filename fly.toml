@@ -1,0 +1,50 @@
+# Deploy no Fly.io.
+#
+# O nome do app e global no Fly: se "portaria-api" ja estiver tomado, troque
+# aqui e no comando de criacao. A regiao gru e Sao Paulo.
+
+app = 'portaria-api'
+primary_region = 'gru'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[env]
+  # producao NAO usa o perfil dev: nada de dado de demonstracao no banco real
+  # (o DemoDataSeeder so roda com SPRING_PROFILES_ACTIVE=dev)
+  TZ = 'America/Sao_Paulo'
+  # a JVM enxerga a memoria do container: sem isto ela dimensiona o heap pelo
+  # host inteiro e o processo apanha do OOM killer
+  JAVA_TOOL_OPTIONS = '-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -Xss512k'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+
+  # a aplicacao e uma JVM: parar a maquina significa ~10s de espera para o
+  # proximo visitante. Para um link de demonstracao isso e caro demais.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  # UMA instancia, de proposito. O job de expiracao (RN-06) roda em toda
+  # replica; ele ja e seguro sob concorrencia desde o commit a823b4e, mas o
+  # Flyway tambem migra no boot, e migracao concorrente e problema que nao
+  # precisa existir num deploy de demonstracao.
+  [http_service.concurrency]
+    type = 'requests'
+    hard_limit = 200
+    soft_limit = 150
+
+  [[http_service.checks]]
+    grace_period = '45s'   # a JVM leva ~10s so para subir o contexto
+    interval = '30s'
+    method = 'GET'
+    timeout = '5s'
+    path = '/actuator/health'
+
+[[vm]]
+  size = 'shared-cpu-1x'
+  # 512 MB e apertado para Spring Boot 4 + Hibernate + pool de conexoes;
+  # o primeiro sintoma seria a maquina morrer sob carga, nao no boot
+  memory = '1gb'

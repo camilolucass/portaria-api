@@ -68,6 +68,25 @@ docker run --rm --network portaria-api_default -p 8080:8080 \
 Imagem multi-stage, ~132 MB, rodando como usuario nao-root com
 `TZ=America/Sao_Paulo`.
 
+### Deploy (Fly.io)
+
+O `fly.toml` sobe **uma** instancia na regiao `gru`. Uma so, de proposito: o job
+de expiracao roda em toda replica e o Flyway migra no boot.
+
+```bash
+fly apps create portaria-api          # o nome e global; troque se estiver tomado
+fly postgres create --region gru      # ou qualquer Postgres 16 gerenciado
+fly secrets set   DB_URL="jdbc:postgresql://HOST:5432/portaria"   DB_USER="..." DB_PASSWORD="..."   QR_SECRET="$(openssl rand -base64 48)"   JWT_SECRET="$(openssl rand -base64 48)"   APP_BOOTSTRAP_ORGANIZER_EMAIL="voce@exemplo.com"   APP_BOOTSTRAP_ORGANIZER_PASSWORD="uma-senha-longa-de-verdade"
+fly deploy
+```
+
+`DB_URL` e informado explicitamente em formato JDBC. O `DATABASE_URL` que os
+provedores expoem vem como `postgres://`, que o Spring nao aceita — separar as
+tres variaveis funciona com Fly Postgres, Neon, Supabase ou qualquer outro.
+
+**Producao nao usa o perfil `dev`**, entao nenhum dado de demonstracao e criado.
+A unica conta que nasce e o organizador do `APP_BOOTSTRAP_ORGANIZER_*`.
+
 ## Rotas
 
 | Metodo | Rota | |
