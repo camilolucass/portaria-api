@@ -1,6 +1,6 @@
 /**
  * Cliente da API. Um lugar so para o token, para o cabecalho Authorization e
- * para o tratamento de erro — as paginas nao falam com fetch diretamente.
+ * para o tratamento de erro. As paginas nao falam com fetch diretamente.
  */
 
 const TOKEN_KEY = 'portaria.token';
@@ -123,7 +123,7 @@ export function brl(cents) {
 }
 
 export function dateTime(value) {
-    if (!value) return '—';
+    if (!value) return '-';
     return new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 }
 
@@ -138,6 +138,26 @@ export function showMessage(element, text, kind = 'error') {
     element.className = `msg ${kind}`;
     element.textContent = text;
     element.hidden = false;
+}
+
+/**
+ * Executa a acao com o botao em estado ocupado.
+ *
+ * O rotulo troca em vez de virar um circulo girando: quem clicou continua
+ * sabendo o que o botao estava fazendo, e o botao nao aceita segundo clique.
+ */
+export async function withBusy(button, busyLabel, action) {
+    const original = button.textContent;
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    button.textContent = busyLabel;
+    try {
+        return await action();
+    } finally {
+        button.disabled = false;
+        button.removeAttribute('aria-busy');
+        button.textContent = original;
+    }
 }
 
 export function mountHeader(title) {

@@ -3,13 +3,14 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Portaria — organizador</title>
+    <meta name="color-scheme" content="light dark">
+    <title>Portaria - organizador</title>
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <header>
     <h1></h1>
-    <div style="display:flex;gap:0.8rem;align-items:center">
+    <div class="session">
         <span class="who"></span>
         <button class="ghost" id="logout">Sair</button>
     </div>
@@ -18,18 +19,23 @@
 <main>
     <section>
         <h2>Meus eventos</h2>
-        <table>
-            <thead>
-            <tr><th>Evento</th><th>Local</th><th>Inicio</th><th>Situacao</th><th></th></tr>
-            </thead>
-            <tbody id="events"></tbody>
-        </table>
-        <div id="eventsMsg" class="msg" hidden></div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Evento</th><th>Local</th><th>Inicio</th><th>Situacao</th>
+                    <th><span class="visually-hidden">Acoes</span></th>
+                </tr>
+                </thead>
+                <tbody id="events"></tbody>
+            </table>
+        </div>
+        <div id="eventsMsg" class="msg" role="alert" hidden></div>
     </section>
 
     <section>
         <h2>Novo evento</h2>
-        <form id="eventForm">
+        <form id="eventForm" novalidate>
             <div class="row">
                 <div><label for="name">Nome</label><input id="name" required maxlength="120"></div>
                 <div><label for="venue">Local</label><input id="venue" required maxlength="160"></div>
@@ -39,9 +45,9 @@
                 <div><label for="startsAt">Inicio</label><input id="startsAt" type="datetime-local" required></div>
                 <div><label for="endsAt">Fim</label><input id="endsAt" type="datetime-local" required></div>
             </div>
-            <button type="submit">Criar evento</button>
+            <button type="submit" id="eventSubmit">Criar evento</button>
         </form>
-        <div id="eventMsg" class="msg" hidden></div>
+        <div id="eventMsg" class="msg" role="alert" hidden></div>
     </section>
 
     <section id="detail" hidden>
@@ -49,32 +55,34 @@
 
         <div class="metrics" id="metrics"></div>
 
-        <table style="margin-top:1rem">
-            <thead>
-            <tr><th>Lote</th><th>Preco</th><th>Vendidos</th><th>Disponiveis</th><th>Presentes</th></tr>
-            </thead>
-            <tbody id="batches"></tbody>
-        </table>
+        <div class="table-wrap stack-top">
+            <table>
+                <thead>
+                <tr><th>Lote</th><th>Preco</th><th>Vendidos</th><th>Disponiveis</th><th>Presentes</th></tr>
+                </thead>
+                <tbody id="batches"></tbody>
+            </table>
+        </div>
 
-        <h2 style="margin-top:1.4rem">Novo lote</h2>
-        <form id="batchForm">
+        <h2 class="section-sub">Novo lote</h2>
+        <form id="batchForm" novalidate>
             <div class="row">
                 <div><label for="batchName">Nome</label><input id="batchName" required maxlength="60"></div>
-                <div><label for="priceCents">Preco (centavos)</label><input id="priceCents" type="number" min="1" required></div>
+                <div><label for="priceCents">Preco em centavos</label><input id="priceCents" type="number" min="1" required></div>
                 <div><label for="totalQuantity">Quantidade</label><input id="totalQuantity" type="number" min="1" required></div>
             </div>
             <div class="row">
                 <div><label for="salesStart">Vendas abrem</label><input id="salesStart" type="datetime-local" required></div>
                 <div><label for="salesEnd">Vendas fecham</label><input id="salesEnd" type="datetime-local" required></div>
             </div>
-            <button type="submit">Criar lote</button>
+            <button type="submit" id="batchSubmit">Criar lote</button>
         </form>
-        <div id="batchMsg" class="msg" hidden></div>
+        <div id="batchMsg" class="msg" role="alert" hidden></div>
     </section>
 </main>
 
 <script type="module">
-    import { api, auth, brl, dateTime, escapeHtml, mountHeader, showMessage } from '/api.js';
+    import { api, auth, brl, dateTime, escapeHtml, mountHeader, showMessage, withBusy } from '/api.js';
 
     auth.require();
     mountHeader('Painel do organizador');
@@ -83,22 +91,24 @@
 
     async function loadEvents() {
         const page = await api.get('/api/v1/events?size=50&sort=startsAt,desc');
-        const rows = page.content.map((event) => `
-            <tr>
-                <td>${escapeHtml(event.name)}</td>
-                <td>${escapeHtml(event.venue)}</td>
-                <td>${dateTime(event.startsAt)}</td>
-                <td><span class="tag ${event.status}">${event.status}</span></td>
-                <td style="text-align:right;white-space:nowrap">
-                    ${event.status === 'DRAFT'
-                        ? `<button class="ghost" data-publish="${event.id}">Publicar</button>`
-                        : ''}
-                    <button class="ghost" data-open="${event.id}" data-name="${escapeHtml(event.name)}">Abrir</button>
-                </td>
-            </tr>`).join('');
 
-        document.querySelector('#events').innerHTML = rows
-            || '<tr><td colspan="5" class="muted">Nenhum evento ainda.</td></tr>';
+        document.querySelector('#events').innerHTML = page.content.length
+            ? page.content.map((event) => `
+                <tr>
+                    <td>${escapeHtml(event.name)}</td>
+                    <td>${escapeHtml(event.venue)}</td>
+                    <td>${dateTime(event.startsAt)}</td>
+                    <td><span class="tag ${event.status}">${event.status}</span></td>
+                    <td class="actions-cell">
+                        ${event.status === 'DRAFT'
+                            ? `<button class="ghost" data-publish="${event.id}">Publicar</button>`
+                            : ''}
+                        <button class="ghost" data-open="${event.id}" data-name="${escapeHtml(event.name)}">Abrir</button>
+                    </td>
+                </tr>`).join('')
+            : `<tr><td colspan="5" class="empty">
+                   Nenhum evento ainda. Crie o primeiro no formulario abaixo.
+               </td></tr>`;
     }
 
     async function loadDetail(eventId, eventName) {
@@ -106,12 +116,16 @@
         document.querySelector('#detail').hidden = false;
         document.querySelector('#detailTitle').textContent = eventName;
 
+        // esqueleto com a forma do que vem, em vez de um circulo girando
+        document.querySelector('#metrics').innerHTML =
+            '<div class="metric"><div class="skeleton skeleton--metric"></div></div>'.repeat(3);
+
         const [batches, stats] = await Promise.all([
             api.get(`/api/v1/events/${eventId}/batches`),
             api.get(`/api/v1/events/${eventId}/stats`),
         ]);
 
-        // o painel cruza duas rotas: availableQuantity vem dos lotes, presenca vem do /stats
+        // o painel cruza duas rotas: availableQuantity vem dos lotes, presenca do /stats
         const checkedInByBatch = new Map(stats.byBatch.map((b) => [b.name, b.checkedIn]));
 
         document.querySelector('#metrics').innerHTML = `
@@ -119,26 +133,33 @@
             <div class="metric"><div class="v">${stats.totalCheckedIn}</div><div class="k">Presentes</div></div>
             <div class="metric"><div class="v">${brl(stats.totalRevenueCents)}</div><div class="k">Receita</div></div>`;
 
-        document.querySelector('#batches').innerHTML = batches.map((batch) => `
-            <tr>
-                <td>${escapeHtml(batch.name)}</td>
-                <td>${brl(batch.priceCents)}</td>
-                <td>${batch.soldQuantity}</td>
-                <td>${batch.availableQuantity}</td>
-                <td>${checkedInByBatch.get(batch.name) ?? 0}</td>
-            </tr>`).join('')
-            || '<tr><td colspan="5" class="muted">Nenhum lote ainda.</td></tr>';
+        document.querySelector('#batches').innerHTML = batches.length
+            ? batches.map((batch) => `
+                <tr>
+                    <td>${escapeHtml(batch.name)}</td>
+                    <td>${brl(batch.priceCents)}</td>
+                    <td>${batch.soldQuantity}</td>
+                    <td>${batch.availableQuantity}</td>
+                    <td>${checkedInByBatch.get(batch.name) ?? 0}</td>
+                </tr>`).join('')
+            : `<tr><td colspan="5" class="empty">
+                   Nenhum lote ainda. Sem lote, o evento nao vende.
+               </td></tr>`;
     }
 
     document.querySelector('#events').addEventListener('click', async (event) => {
         const publish = event.target.dataset.publish;
         const open = event.target.dataset.open;
+        if (!publish && !open) return;
+
         try {
             if (publish) {
-                await api.post(`/api/v1/events/${publish}/publish`);
+                await withBusy(event.target, 'Publicando...', () =>
+                    api.post(`/api/v1/events/${publish}/publish`));
                 await loadEvents();
-            } else if (open) {
+            } else {
                 await loadDetail(open, event.target.dataset.name);
+                document.querySelector('#detail').scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         } catch (error) {
             showMessage(document.querySelector('#eventsMsg'), error.message);
@@ -150,15 +171,16 @@
         const msg = document.querySelector('#eventMsg');
         msg.hidden = true;
         try {
-            await api.post('/api/v1/events', {
-                name: document.querySelector('#name').value,
-                venue: document.querySelector('#venue').value,
-                gateOpensAt: document.querySelector('#gateOpensAt').value,
-                startsAt: document.querySelector('#startsAt').value,
-                endsAt: document.querySelector('#endsAt').value,
-            });
+            await withBusy(document.querySelector('#eventSubmit'), 'Criando...', () =>
+                api.post('/api/v1/events', {
+                    name: document.querySelector('#name').value,
+                    venue: document.querySelector('#venue').value,
+                    gateOpensAt: document.querySelector('#gateOpensAt').value,
+                    startsAt: document.querySelector('#startsAt').value,
+                    endsAt: document.querySelector('#endsAt').value,
+                }));
             event.target.reset();
-            showMessage(msg, 'Evento criado em DRAFT.', 'ok');
+            showMessage(msg, 'Evento criado em DRAFT. Publique para comecar a vender.', 'ok');
             await loadEvents();
         } catch (error) {
             showMessage(msg, error.message);
@@ -170,13 +192,14 @@
         const msg = document.querySelector('#batchMsg');
         msg.hidden = true;
         try {
-            await api.post(`/api/v1/events/${selected}/batches`, {
-                name: document.querySelector('#batchName').value,
-                priceCents: Number(document.querySelector('#priceCents').value),
-                totalQuantity: Number(document.querySelector('#totalQuantity').value),
-                salesStart: document.querySelector('#salesStart').value,
-                salesEnd: document.querySelector('#salesEnd').value,
-            });
+            await withBusy(document.querySelector('#batchSubmit'), 'Criando...', () =>
+                api.post(`/api/v1/events/${selected}/batches`, {
+                    name: document.querySelector('#batchName').value,
+                    priceCents: Number(document.querySelector('#priceCents').value),
+                    totalQuantity: Number(document.querySelector('#totalQuantity').value),
+                    salesStart: document.querySelector('#salesStart').value,
+                    salesEnd: document.querySelector('#salesEnd').value,
+                }));
             event.target.reset();
             showMessage(msg, 'Lote criado.', 'ok');
             await loadDetail(selected, document.querySelector('#detailTitle').textContent);

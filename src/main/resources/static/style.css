@@ -1,109 +1,500 @@
+/*
+ * Interface da Portaria.
+ *
+ * Nao e landing page: sao telas de operacao. Formulario, tabela e leitor de QR
+ * pedem previsibilidade, nao composicao assimetrica: quem usa isto esta
+ * trabalhando, muitas vezes de pe e com fila na frente.
+ *
+ * Sistema de forma (uma regra, seguida em tudo):
+ *   controles (input, botao) .... 8px
+ *   containers (secao, cartao) .. 12px
+ *   etiquetas ................... pilula
+ *
+ * Cores passam WCAG AA em ambos os modos. Os valores nao foram escolhidos por
+ * gosto: o azul do botao original dava 3.16:1 com texto branco, abaixo do
+ * minimo de 4.5:1, e foi escurecido ate 5.37:1.
+ */
+
 :root {
-    --bg: #0f1115;
-    --surface: #171a21;
-    --surface-2: #1e222b;
-    --line: #2a2f3a;
-    --text: #e8eaed;
-    --muted: #9aa3b2;
-    --accent: #5b8cff;
-    --ok: #1f9d55;
-    --danger: #d64545;
-    --warn: #c9962a;
-    --radius: 10px;
+    color-scheme: light dark;
+
+    /* escala de espacamento: multiplos de 4px, sem valores avulsos */
+    --s1: 0.25rem;
+    --s2: 0.5rem;
+    --s3: 0.75rem;
+    --s4: 1rem;
+    --s5: 1.5rem;
+    --s6: 2rem;
+    --s7: 3rem;
+
+    --r-control: 8px;
+    --r-container: 12px;
+    --r-pill: 999px;
+
+    /* alvo minimo de toque; a portaria e usada no celular */
+    --touch: 44px;
+
+    --accent-fill: #3563d6;      /* fundo de botao: 5.37:1 com branco */
+    --ok: #177f45;               /* 5.05:1 com branco */
+    --danger: #b12d2d;           /* 6.40:1 com branco */
+    --warn: #8a6410;
+
+    --bg: #f7f8fa;
+    --surface: #ffffff;
+    --surface-2: #f1f3f7;
+    --line: #dfe3ea;
+    --text: #12151b;
+    --muted: #5b6472;
+    --accent-text: #2f5ccc;      /* 5.96:1 sobre branco */
+    --shadow: 0 1px 2px rgb(18 21 27 / 0.06), 0 8px 24px rgb(18 21 27 / 0.05);
 }
 
-* { box-sizing: border-box; }
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #0f1115;
+        --surface: #171a21;
+        --surface-2: #1e222b;
+        --line: #2a2f3a;
+        --text: #e8eaed;
+        --muted: #9aa3b2;
+        --accent-text: #7ea4ff;  /* 6.6:1 sobre a superficie escura */
+        /* sombra some no escuro: profundidade vem da borda, nao do borrao */
+        --shadow: none;
+    }
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
 
 body {
     margin: 0;
     background: var(--bg);
     color: var(--text);
-    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
 }
+
+/*
+ * Fonte do sistema por decisao, nao por omissao: a portaria roda no celular de
+ * quem esta no evento, muitas vezes em rede ruim. Webfont ali custa primeira
+ * pintura e risco de texto invisivel enquanto baixa.
+ */
+
+/* numeros em tabela e metrica alinham em coluna */
+table,
+.metric .v,
+code,
+.mono {
+    font-variant-numeric: tabular-nums;
+}
+
+/* movimento: so como retorno de acao, e sempre desligavel */
+@media (prefers-reduced-motion: no-preference) {
+    button,
+    input,
+    select,
+    .metric,
+    tbody tr {
+        transition: background-color 0.15s ease, border-color 0.15s ease,
+                    transform 0.08s ease, box-shadow 0.15s ease;
+    }
+}
+
+/* foco visivel em tudo que recebe teclado. Sem isto, navegar por Tab e cego */
+:focus-visible {
+    outline: 2px solid var(--accent-text);
+    outline-offset: 2px;
+    border-radius: var(--r-control);
+}
+
+/* ---------------------------------------------------------------- estrutura */
 
 header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
-    padding: 0.9rem 1.25rem;
+    gap: var(--s4);
+    padding: var(--s3) var(--s5);
     background: var(--surface);
     border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
-header h1 { font-size: 1rem; margin: 0; font-weight: 600; }
-header .who { color: var(--muted); font-size: 0.85rem; }
+header h1 {
+    font-size: 0.95rem;
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
 
-main { max-width: 960px; margin: 0 auto; padding: 1.25rem; }
+header .session {
+    display: flex;
+    gap: var(--s3);
+    align-items: center;
+}
+
+header .who {
+    color: var(--muted);
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+}
+
+main {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: var(--s5) var(--s4) var(--s7);
+}
 
 section {
     background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 1.1rem;
-    margin-bottom: 1.1rem;
+    border-radius: var(--r-container);
+    padding: var(--s5);
+    margin-bottom: var(--s4);
+    box-shadow: var(--shadow);
 }
 
-h2 { font-size: 0.95rem; margin: 0 0 0.9rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+h2 {
+    font-size: 0.78rem;
+    margin: 0 0 var(--s4);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    font-weight: 600;
+}
 
-label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.25rem; }
+/* so para leitor de tela: cabecalho de coluna que nao precisa aparecer */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
 
-input, select {
+/* utilitarios pontuais, para o HTML nao carregar style= */
+.center { text-align: center; }
+.stack-top { margin-top: var(--s4); }
+.skeleton--metric { height: 2rem; }
+.skeleton--qr { height: 220px; }
+
+/* segundo titulo dentro da mesma secao */
+.section-sub {
+    margin-top: var(--s6);
+}
+
+/* ---------------------------------------------------------------- formulario */
+
+label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: var(--s1);
+}
+
+input,
+select {
     width: 100%;
-    padding: 0.55rem 0.7rem;
+    min-height: var(--touch);
+    padding: var(--s2) var(--s3);
     background: var(--surface-2);
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: var(--r-control);
     color: var(--text);
     font: inherit;
 }
 
-input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+input::placeholder {
+    color: var(--muted);
+    opacity: 1;    /* Firefox esmaece o placeholder por conta propria */
+}
 
-.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.7rem; margin-bottom: 0.7rem; }
+.field {
+    margin-bottom: var(--s3);
+}
+
+.row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--s3);
+    margin-bottom: var(--s3);
+}
+
+/* ------------------------------------------------------------------- botoes */
 
 button {
-    padding: 0.55rem 0.95rem;
-    background: var(--accent);
+    min-height: var(--touch);
+    padding: var(--s2) var(--s4);
+    background: var(--accent-fill);
     color: #fff;
-    border: 0;
-    border-radius: 8px;
+    border: 1px solid transparent;
+    border-radius: var(--r-control);
     font: inherit;
     font-weight: 600;
     cursor: pointer;
 }
 
-button:hover { filter: brightness(1.1); }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
-button.ghost { background: transparent; border: 1px solid var(--line); color: var(--text); font-weight: 500; }
+button:hover:not(:disabled) {
+    filter: brightness(1.08);
+}
 
-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-th, td { text-align: left; padding: 0.5rem 0.4rem; border-bottom: 1px solid var(--line); }
-th { color: var(--muted); font-weight: 500; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+/* retorno tatil: o botao afunda sob o dedo */
+button:active:not(:disabled) {
+    transform: translateY(1px);
+}
 
-.tag { display: inline-block; padding: 0.1rem 0.45rem; border-radius: 999px; font-size: 0.72rem; border: 1px solid var(--line); color: var(--muted); }
-.tag.PUBLISHED { color: #7fd6a2; border-color: #2f5c44; }
-.tag.DRAFT { color: var(--warn); border-color: #5c4a1f; }
+button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
 
-.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.7rem; }
-.metric { background: var(--surface-2); border-radius: 8px; padding: 0.8rem; }
-.metric .v { font-size: 1.5rem; font-weight: 700; }
-.metric .k { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+button.ghost {
+    background: transparent;
+    border-color: var(--line);
+    color: var(--text);
+    font-weight: 500;
+}
 
-.msg { padding: 0.6rem 0.8rem; border-radius: 8px; font-size: 0.88rem; margin-top: 0.7rem; }
-.msg.error { background: #3a1d1d; color: #ffb4b4; }
-.msg.ok { background: #14331f; color: #a5e7c0; }
-.muted { color: var(--muted); font-size: 0.85rem; }
+button.ghost:hover:not(:disabled) {
+    background: var(--surface-2);
+    filter: none;
+}
 
-/* login ------------------------------------------------------------------ */
-.login { max-width: 380px; margin: 12vh auto; }
-.login p.hint { font-size: 0.8rem; color: var(--muted); line-height: 1.6; }
+/* botao ocupado: o rotulo troca, entao nao ha spinner sem texto */
+button[aria-busy="true"] {
+    opacity: 0.7;
+    cursor: progress;
+}
 
-/* portaria --------------------------------------------------------------- */
-#reader { width: 100%; max-width: 460px; margin: 0 auto; border-radius: var(--radius); overflow: hidden; }
+.actions {
+    display: flex;
+    align-items: center;
+    gap: var(--s3);
+    flex-wrap: wrap;
+}
 
-/* o retorno da portaria e a tela inteira: quem opera olha de longe, com o
-   celular na mao e fila na frente. Cor e o unico canal que funciona assim. */
+/* ------------------------------------------------------------------ tabelas */
+
+/*
+ * A tabela rola sozinha no celular. Sem isto ela empurra a pagina inteira e o
+ * usuario passa a rolar o layout de lado para ler uma coluna.
+ */
+.table-wrap {
+    overflow-x: auto;
+    margin: 0 calc(var(--s5) * -1);
+    padding: 0 var(--s5);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    min-width: 460px;
+}
+
+th,
+td {
+    text-align: left;
+    padding: var(--s2) var(--s2);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+}
+
+th {
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+tbody tr:hover {
+    background: var(--surface-2);
+}
+
+td.actions-cell {
+    text-align: right;
+}
+
+/* --------------------------------------------------------------- etiquetas */
+
+.tag {
+    display: inline-block;
+    padding: 0.15rem var(--s2);
+    border-radius: var(--r-pill);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    border: 1px solid currentColor;
+}
+
+.tag.PUBLISHED { color: var(--ok); }
+.tag.DRAFT { color: var(--warn); }
+.tag.FINISHED,
+.tag.CANCELLED { color: var(--muted); }
+
+@media (prefers-color-scheme: dark) {
+    .tag.PUBLISHED { color: #6fce9c; }
+    .tag.DRAFT { color: #d8a33f; }
+}
+
+/* ---------------------------------------------------------------- metricas */
+
+.metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--s3);
+}
+
+.metric {
+    background: var(--surface-2);
+    border-radius: var(--r-container);
+    padding: var(--s4);
+}
+
+.metric .v {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+}
+
+.metric .k {
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: var(--s1);
+}
+
+/* ------------------------------------------------------- mensagens e vazios */
+
+.msg {
+    padding: var(--s3);
+    border-radius: var(--r-control);
+    font-size: 0.88rem;
+    margin-top: var(--s3);
+    border: 1px solid transparent;
+}
+
+.msg.error {
+    background: color-mix(in srgb, var(--danger) 12%, transparent);
+    border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+    color: var(--danger);
+}
+
+.msg.ok {
+    background: color-mix(in srgb, var(--ok) 12%, transparent);
+    border-color: color-mix(in srgb, var(--ok) 40%, transparent);
+    color: var(--ok);
+}
+
+@media (prefers-color-scheme: dark) {
+    .msg.error { color: #ff9d9d; }
+    .msg.ok { color: #7fd6a2; }
+}
+
+.muted {
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+/* estado vazio: diz o que fazer, nao so que nao ha nada */
+.empty {
+    color: var(--muted);
+    font-size: 0.88rem;
+    padding: var(--s4) 0;
+}
+
+/* carregando: a forma do que vem, nao um circulo girando */
+.skeleton {
+    background: linear-gradient(90deg,
+        var(--surface-2) 25%,
+        color-mix(in srgb, var(--line) 60%, var(--surface-2)) 37%,
+        var(--surface-2) 63%);
+    background-size: 400% 100%;
+    border-radius: var(--r-control);
+    height: 1rem;
+    margin: var(--s2) 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .skeleton {
+        animation: shimmer 1.4s ease infinite;
+    }
+}
+
+@keyframes shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: 0 0; }
+}
+
+/* ------------------------------------------------------------------- login */
+
+.login {
+    max-width: 380px;
+    margin: 10vh auto;
+    padding: 0 var(--s4);
+}
+
+.login .brand {
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0 0 var(--s1);
+}
+
+.login .lead {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin: 0 0 var(--s5);
+}
+
+.login button[type="submit"] {
+    width: 100%;
+}
+
+.hint {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-top: var(--s4);
+    padding-top: var(--s4);
+    border-top: 1px solid var(--line);
+}
+
+.hint code {
+    background: var(--surface-2);
+    padding: 0.1rem 0.3rem;
+    border-radius: 4px;
+}
+
+/* ---------------------------------------------------------------- portaria */
+
+#reader {
+    width: 100%;
+    max-width: 460px;
+    margin: 0 auto;
+    border-radius: var(--r-container);
+    overflow: hidden;
+}
+
+/*
+ * O veredito ocupa a tela inteira porque quem opera olha de relance, de pe,
+ * com fila na frente. Cor e o unico canal que funciona a tres metros; o texto
+ * confirma de perto.
+ */
 #verdict {
     position: fixed;
     inset: 0;
@@ -112,16 +503,107 @@ th { color: var(--muted); font-weight: 500; font-size: 0.78rem; text-transform: 
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 2rem;
+    padding: var(--s6);
     z-index: 50;
+    color: #fff;
 }
-#verdict.show { display: flex; }
+
+#verdict.show {
+    display: flex;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    #verdict.show {
+        animation: verdict-in 0.18s ease-out;
+    }
+}
+
+@keyframes verdict-in {
+    from { opacity: 0; transform: scale(0.97); }
+    to { opacity: 1; transform: scale(1); }
+}
+
 #verdict.granted { background: var(--ok); }
 #verdict.denied { background: var(--danger); }
-#verdict .icon { font-size: 5rem; line-height: 1; }
-#verdict .title { font-size: 2rem; font-weight: 800; margin: 0.5rem 0; }
-#verdict .detail { font-size: 1.05rem; opacity: 0.95; max-width: 30ch; }
-#verdict .holder { font-size: 1.4rem; font-weight: 600; margin-top: 0.5rem; }
 
-.qr { display: block; margin: 0.8rem auto; background: #fff; padding: 8px; border-radius: 8px; }
-code.code { display: block; word-break: break-all; font-size: 0.75rem; color: var(--muted); margin-top: 0.4rem; }
+#verdict .icon {
+    font-size: clamp(3.5rem, 18vw, 6rem);
+    line-height: 1;
+}
+
+#verdict .title {
+    font-size: clamp(1.6rem, 8vw, 2.4rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: var(--s2) 0;
+}
+
+#verdict .holder {
+    font-size: clamp(1.1rem, 5vw, 1.5rem);
+    font-weight: 600;
+}
+
+#verdict .detail {
+    font-size: 1rem;
+    margin-top: var(--s2);
+    max-width: 30ch;
+}
+
+#verdict .dismiss {
+    margin-top: var(--s6);
+    background: rgb(255 255 255 / 0.16);
+    border-color: rgb(255 255 255 / 0.4);
+    color: #fff;
+}
+
+/* ---------------------------------------------------------------- ingressos */
+
+.tickets {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--s4);
+}
+
+.ticket {
+    text-align: center;
+}
+
+.qr {
+    display: block;
+    margin: 0 auto var(--s2);
+    background: #fff;         /* o QR precisa de fundo branco em qualquer modo */
+    padding: var(--s2);
+    border-radius: var(--r-control);
+    width: 100%;
+    max-width: 200px;
+    height: auto;
+}
+
+code.code {
+    display: block;
+    word-break: break-all;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: var(--s1);
+}
+
+/* ------------------------------------------------------------------ mobile */
+
+@media (max-width: 640px) {
+    main {
+        padding: var(--s4) var(--s3) var(--s6);
+    }
+
+    section {
+        padding: var(--s4);
+    }
+
+    .table-wrap {
+        margin: 0 calc(var(--s4) * -1);
+        padding: 0 var(--s4);
+    }
+
+    header {
+        padding: var(--s3) var(--s4);
+    }
+}

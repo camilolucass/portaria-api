@@ -3,13 +3,14 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Portaria — comprar ingresso</title>
+    <meta name="color-scheme" content="light dark">
+    <title>Portaria - comprar ingresso</title>
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <header>
     <h1></h1>
-    <div style="display:flex;gap:0.8rem;align-items:center">
+    <div class="session">
         <span class="who"></span>
         <button class="ghost" id="logout">Sair</button>
     </div>
@@ -17,7 +18,7 @@
 
 <main>
     <section>
-        <h2>Eventos a venda</h2>
+        <h2>Escolha</h2>
         <div class="row">
             <div>
                 <label for="event">Evento</label>
@@ -40,31 +41,31 @@
 
     <section>
         <h2>Titulares</h2>
-        <p class="muted">Um nome por ingresso — a API recusa com 400 se a contagem nao bater.</p>
+        <p class="muted">Um nome por ingresso. A API recusa com 400 se a contagem nao bater.</p>
         <div id="holders"></div>
 
-        <h2 style="margin-top:1.2rem">Comprador</h2>
+        <h2 class="section-sub">Comprador</h2>
         <div class="row">
             <div><label for="buyerName">Nome</label><input id="buyerName" value="Lucas Camilo"></div>
             <div><label for="buyerEmail">E-mail</label><input id="buyerEmail" type="email" value="lucas@exemplo.com"></div>
             <div><label for="buyerDocument">Documento</label><input id="buyerDocument" value="12345678900"></div>
         </div>
 
-        <button id="buy">Comprar e pagar</button>
-        <span class="muted" style="margin-left:0.6rem">
-            reserva o estoque, depois confirma o pagamento
-        </span>
-        <div id="msg" class="msg" hidden></div>
+        <div class="actions">
+            <button id="buy">Comprar e pagar</button>
+            <span class="muted">reserva o estoque, depois confirma o pagamento</span>
+        </div>
+        <div id="msg" class="msg" role="alert" hidden></div>
     </section>
 
     <section id="ticketsSection" hidden>
         <h2>Meus ingressos</h2>
-        <div id="tickets"></div>
+        <div class="tickets" id="tickets"></div>
     </section>
 </main>
 
 <script type="module">
-    import { api, auth, brl, escapeHtml, mountHeader, showMessage } from '/api.js';
+    import { api, auth, brl, escapeHtml, mountHeader, showMessage, withBusy } from '/api.js';
 
     auth.require();
     mountHeader('Comprar ingresso');
@@ -79,16 +80,23 @@
     function renderHolders() {
         const total = Number(quantitySelect.value);
         document.querySelector('#holders').innerHTML = Array.from({ length: total }, (_, i) => `
-            <div class="row">
-                <div><label for="h${i}">Titular ${i + 1}</label><input id="h${i}" value="Titular ${i + 1}"></div>
+            <div class="field">
+                <label for="h${i}">Titular ${i + 1}</label>
+                <input id="h${i}" value="Titular ${i + 1}">
             </div>`).join('');
     }
 
     async function loadEvents() {
         const page = await api.get('/api/v1/events?size=50');
+        if (!page.content.length) {
+            document.querySelector('#batchInfo').textContent =
+                'Nenhum evento a venda no momento.';
+            document.querySelector('#buy').disabled = true;
+            return;
+        }
         eventSelect.innerHTML = page.content
             .map((e) => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
-        if (page.content.length) await loadBatches();
+        await loadBatches();
     }
 
     async function loadBatches() {
@@ -100,31 +108,45 @@
 
     function showBatchInfo() {
         const batch = batches.find((b) => b.id === batchSelect.value);
-        document.querySelector('#batchInfo').textContent = batch
-            ? `${brl(batch.priceCents)} — ${batch.availableQuantity} de ${batch.totalQuantity} disponiveis`
-            : 'Este evento ainda nao tem lotes.';
+        const buy = document.querySelector('#buy');
+
+        if (!batch) {
+            document.querySelector('#batchInfo').textContent = 'Este evento ainda nao tem lotes.';
+            buy.disabled = true;
+            return;
+        }
+        buy.disabled = batch.availableQuantity === 0;
+        document.querySelector('#batchInfo').textContent = batch.availableQuantity === 0
+            ? `${brl(batch.priceCents)}. Lote esgotado.`
+            : `${brl(batch.priceCents)}. ${batch.availableQuantity} de ${batch.totalQuantity} disponiveis.`;
     }
 
     /** O PNG exige token, entao a imagem vem por fetch e vira object URL. */
     async function renderTickets(order) {
-        document.querySelector('#ticketsSection').hidden = false;
+        const section = document.querySelector('#ticketsSection');
         const container = document.querySelector('#tickets');
-        container.innerHTML = '';
+        section.hidden = false;
+        container.innerHTML = '<div class="skeleton skeleton--qr"></div>';
 
+        const cards = [];
         for (const ticket of order.tickets) {
             const detail = await api.get(`/api/v1/tickets/${ticket.id}`);
             const src = await api.qrCodeUrl(ticket.id);
-            const card = document.createElement('div');
-            card.style.cssText = 'display:inline-block;text-align:center;margin:0 1rem 1rem 0';
-            card.innerHTML = `
-                <img class="qr" src="${src}" alt="QR do ingresso" width="220" height="220">
-                <strong>${escapeHtml(detail.holderName)}</strong>
-                <code class="code">${escapeHtml(detail.code)}</code>`;
-            container.appendChild(card);
+            cards.push(`
+                <div class="ticket">
+                    <img class="qr" src="${src}" width="200" height="200"
+                         alt="QR Code do ingresso de ${escapeHtml(detail.holderName)}">
+                    <strong>${escapeHtml(detail.holderName)}</strong>
+                    <code class="code">${escapeHtml(detail.code)}</code>
+                </div>`);
         }
+
+        container.innerHTML = cards.join('');
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    eventSelect.addEventListener('change', () => loadBatches().catch((e) => showMessage(msg, e.message)));
+    eventSelect.addEventListener('change', () =>
+        loadBatches().catch((e) => showMessage(msg, e.message)));
     batchSelect.addEventListener('change', showBatchInfo);
     quantitySelect.addEventListener('change', renderHolders);
 
@@ -132,24 +154,27 @@
         msg.hidden = true;
         const quantity = Number(quantitySelect.value);
         try {
-            const order = await api.post('/api/v1/orders', {
-                batchId: batchSelect.value,
-                quantity,
-                buyer: {
-                    name: document.querySelector('#buyerName').value,
-                    email: document.querySelector('#buyerEmail').value,
-                    document: document.querySelector('#buyerDocument').value,
-                },
-                holders: Array.from({ length: quantity }, (_, i) => ({
-                    name: document.querySelector(`#h${i}`).value,
-                })),
-            });
+            await withBusy(document.querySelector('#buy'), 'Processando...', async () => {
+                const order = await api.post('/api/v1/orders', {
+                    batchId: batchSelect.value,
+                    quantity,
+                    buyer: {
+                        name: document.querySelector('#buyerName').value,
+                        email: document.querySelector('#buyerEmail').value,
+                        document: document.querySelector('#buyerDocument').value,
+                    },
+                    holders: Array.from({ length: quantity }, (_, i) => ({
+                        name: document.querySelector(`#h${i}`).value,
+                    })),
+                });
 
-            // RN-07: o ingresso so nasce na transicao para PAID
-            const paid = await api.post(`/api/v1/orders/${order.id}/pay`);
-            showMessage(msg, `Pedido pago — ${paid.tickets.length} ingresso(s) emitido(s).`, 'ok');
-            await renderTickets(paid);
-            await loadBatches();
+                // RN-07: o ingresso so nasce na transicao para PAID
+                const paid = await api.post(`/api/v1/orders/${order.id}/pay`);
+                showMessage(msg,
+                    `Pedido pago. ${paid.tickets.length} ingresso(s) emitido(s).`, 'ok');
+                await renderTickets(paid);
+                await loadBatches();
+            });
         } catch (error) {
             showMessage(msg, `${error.title}: ${error.message}`);
         }

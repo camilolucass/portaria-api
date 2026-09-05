@@ -3,14 +3,15 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Portaria — validar entrada</title>
+    <meta name="color-scheme" content="light dark">
+    <title>Portaria - validar entrada</title>
     <link rel="stylesheet" href="/style.css">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 </head>
 <body>
 <header>
     <h1></h1>
-    <div style="display:flex;gap:0.8rem;align-items:center">
+    <div class="session">
         <span class="who"></span>
         <button class="ghost" id="logout">Sair</button>
     </div>
@@ -20,26 +21,34 @@
     <section>
         <h2>Leitor</h2>
         <div id="reader"></div>
-        <p class="muted" id="cameraMsg" style="text-align:center"></p>
+        <p class="muted center" id="cameraMsg"></p>
     </section>
 
     <section>
         <h2>Codigo manual</h2>
-        <p class="muted">Para quando a camera falha — ou para demonstrar sem celular.</p>
-        <div class="row">
-            <div style="grid-column:1/-1"><input id="manual" placeholder="uuid.assinatura"></div>
+        <div class="field">
+            <label for="manual">Codigo do ingresso</label>
+            <input id="manual" autocapitalize="none" spellcheck="false"
+                   aria-describedby="manualHelp">
+            <p class="muted" id="manualHelp">
+                Para quando a camera falha, ou para validar sem celular.
+            </p>
         </div>
         <button id="send">Validar</button>
     </section>
 </main>
 
-<!-- o retorno ocupa a tela inteira: quem opera portaria olha de relance, com
-     fila na frente. Ler texto pequeno nao e opcao. -->
-<div id="verdict">
-    <div class="icon" id="vIcon"></div>
+<!--
+  O retorno ocupa a tela inteira: quem opera olha de relance, de pe, com fila
+  na frente. aria-live faz o leitor de tela anunciar o veredito sem que o foco
+  precise sair do campo.
+-->
+<div id="verdict" role="status" aria-live="assertive">
+    <div class="icon" id="vIcon" aria-hidden="true"></div>
     <div class="title" id="vTitle"></div>
     <div class="holder" id="vHolder"></div>
     <div class="detail" id="vDetail"></div>
+    <button class="ghost dismiss" id="vDismiss">Proximo</button>
 </div>
 
 <script type="module">
@@ -49,7 +58,18 @@
     mountHeader('Portaria');
 
     const verdict = document.querySelector('#verdict');
+    const manual = document.querySelector('#manual');
+    const HOLD_MS = 2600;
+
     let busy = false;
+    let timer = null;
+
+    function clearVerdict() {
+        clearTimeout(timer);
+        verdict.className = '';
+        busy = false;
+        manual.focus();
+    }
 
     function show(kind, icon, title, holder, detail) {
         verdict.className = `show ${kind}`;
@@ -57,12 +77,16 @@
         document.querySelector('#vTitle').textContent = title;
         document.querySelector('#vHolder').textContent = holder || '';
         document.querySelector('#vDetail').textContent = detail || '';
-        setTimeout(() => { verdict.className = ''; busy = false; }, 2600);
+
+        // some sozinho, mas da para adiantar: numa fila, 2,6s por pessoa e muito
+        clearTimeout(timer);
+        timer = setTimeout(clearVerdict, HOLD_MS);
     }
 
     async function validate(code) {
-        // trava enquanto mostra o resultado: a camera dispara varias leituras
-        // por segundo e sem isto a mesma pessoa geraria dezenas de requisicoes
+        // trava enquanto o resultado esta na tela: a camera dispara varias
+        // leituras por segundo e sem isto uma pessoa geraria dezenas de
+        // requisicoes, todas menos a primeira voltando 409
         if (busy || !code) return;
         busy = true;
 
@@ -75,21 +99,35 @@
         }
     }
 
+    document.querySelector('#vDismiss').addEventListener('click', clearVerdict);
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && verdict.classList.contains('show')) clearVerdict();
+    });
+
     document.querySelector('#send').addEventListener('click', () => {
-        const input = document.querySelector('#manual');
-        validate(input.value.trim());
-        input.value = '';
+        validate(manual.value.trim());
+        manual.value = '';
+    });
+
+    // Enter valida: quem digita codigo nao quer tirar a mao do teclado
+    manual.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            validate(manual.value.trim());
+            manual.value = '';
+        }
     });
 
     /*
      * getUserMedia so funciona em contexto seguro: HTTPS ou localhost. Aberta
-     * pelo IP da rede local, a camera e bloqueada pelo navegador — dai a
-     * mensagem explicita, em vez de uma tela morta sem explicacao.
+     * pelo IP da rede local, a camera e bloqueada pelo navegador, entao a tela
+     * diz isso em vez de mostrar um leitor morto sem explicacao.
      */
     const cameraMsg = document.querySelector('#cameraMsg');
     if (!window.isSecureContext) {
         cameraMsg.textContent =
-            'Camera indisponivel: a pagina precisa estar em HTTPS ou localhost. Use o codigo manual.';
+            'Camera indisponivel: a pagina precisa estar em HTTPS ou localhost. '
+            + 'Use o codigo manual abaixo.';
     } else {
         const scanner = new Html5Qrcode('reader');
         scanner.start(
@@ -98,7 +136,8 @@
             (text) => validate(text),
             () => { /* quadro sem QR e o caso normal, nao e erro */ },
         ).catch((error) => {
-            cameraMsg.textContent = `Nao foi possivel abrir a camera: ${error}. Use o codigo manual.`;
+            cameraMsg.textContent = `Nao foi possivel abrir a camera (${error}). `
+                + 'Use o codigo manual abaixo.';
         });
     }
 </script>

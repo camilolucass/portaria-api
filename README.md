@@ -117,6 +117,23 @@ artefato para versionar.
 | `/comprador.html` | Compra, pagamento simulado e o QR do ingresso |
 | `/portaria.html` | Le a camera e responde verde ou vermelho em tela cheia |
 
+Decisoes de design, com o motivo:
+
+- **Variancia baixa de proposito.** Formulario e tabela pedem previsibilidade;
+  composicao assimetrica atrapalha quem esta trabalhando. A inovacao aqui esta
+  na interacao da portaria, nao no layout.
+- **Fonte do sistema.** A portaria roda no celular de quem esta no evento,
+  muitas vezes em rede ruim. Webfont ali custa primeira pintura e risco de texto
+  invisivel enquanto baixa.
+- **Claro e escuro** via `prefers-color-scheme`, com tokens semanticos.
+- **Contraste WCAG AA verificado com calculo, nao a olho.** O azul original do
+  botao dava 3.16:1 com texto branco, abaixo do minimo de 4.5:1; foi escurecido
+  ate 5.37:1. O verde e o vermelho do veredito subiram para 5.05:1 e 6.40:1.
+- **Alvo de toque de 44px** em todo controle, porque a portaria e usada com o
+  polegar, de pe.
+- **Movimento so como retorno de acao** (botao afunda, veredito entra), sempre
+  atras de `prefers-reduced-motion`.
+
 Tres detalhes que a interface obrigou a resolver:
 
 - **O PNG do QR exige `Authorization`**, e o navegador nao manda cabecalho em

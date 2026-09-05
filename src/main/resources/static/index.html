@@ -3,25 +3,31 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Portaria — entrar</title>
+    <meta name="color-scheme" content="light dark">
+    <title>Portaria - entrar</title>
     <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <main class="login">
     <section>
-        <h2>Portaria</h2>
-        <form id="form">
-            <div style="margin-bottom:0.7rem">
+        <h1 class="brand">Portaria</h1>
+        <p class="lead">Venda de ingressos e controle de entrada.</p>
+
+        <form id="form" novalidate>
+            <div class="field">
                 <label for="email">E-mail</label>
-                <input id="email" type="email" autocomplete="username" required>
+                <input id="email" type="email" autocomplete="username"
+                       autocapitalize="none" spellcheck="false" required>
             </div>
-            <div style="margin-bottom:1rem">
+            <div class="field">
                 <label for="password">Senha</label>
                 <input id="password" type="password" autocomplete="current-password" required>
             </div>
-            <button type="submit" id="submit" style="width:100%">Entrar</button>
+            <button type="submit" id="submit">Entrar</button>
         </form>
-        <div id="msg" class="msg" hidden></div>
+
+        <div id="msg" class="msg" role="alert" hidden></div>
+
         <p class="hint" id="hint"></p>
     </section>
 </main>
@@ -33,11 +39,11 @@
     const submit = document.querySelector('#submit');
     const msg = document.querySelector('#msg');
 
-    // as contas de demonstracao so existem sob o perfil dev; em producao esta
-    // dica nao aparece, porque o endpoint responde 401 para elas
-    document.querySelector('#hint').textContent =
-        'Contas do perfil dev: organizador@exemplo.com, portaria@exemplo.com ou '
-        + 'comprador@exemplo.com — senha portaria-dev-2026.';
+    // as contas de demonstracao so existem sob o perfil dev
+    document.querySelector('#hint').innerHTML =
+        'Contas de demonstracao: <code>organizador@exemplo.com</code>, '
+        + '<code>portaria@exemplo.com</code> ou <code>comprador@exemplo.com</code>. '
+        + 'Senha <code>portaria-dev-2026</code>.';
 
     /** Cada papel tem uma tela. Quem acumula papeis cai na mais completa. */
     function destinationFor(roles) {
@@ -49,7 +55,13 @@
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
         msg.hidden = true;
+
+        // o rotulo troca em vez de virar um circulo girando: o usuario continua
+        // sabendo o que o botao estava fazendo
         submit.disabled = true;
+        submit.setAttribute('aria-busy', 'true');
+        submit.textContent = 'Entrando...';
+
         try {
             const session = await api.login(
                 document.querySelector('#email').value,
@@ -59,6 +71,9 @@
         } catch (error) {
             showMessage(msg, error.message);
             submit.disabled = false;
+            submit.removeAttribute('aria-busy');
+            submit.textContent = 'Entrar';
+            document.querySelector('#password').focus();
         }
     });
 </script>

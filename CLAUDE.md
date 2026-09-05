@@ -155,6 +155,13 @@ vale tambem para arquivo estatico.
 
 - O PNG do QR exige `Authorization`: use `fetch` + `Blob` + object URL, nunca
   `<img src>` direto.
+- **Sistema de forma:** controles 8px, containers 12px, etiquetas pilula. Uma
+  regra, seguida em tudo. Nao invente um quarto raio.
+- **Cor nova passa por calculo de contraste antes de entrar.** O minimo e WCAG
+  AA: 4.5:1 para texto normal, 3:1 para texto grande. Os valores atuais estao
+  comentados no `style.css` com a razao medida.
+- **Alvo de toque minimo de 44px** (`--touch`) em qualquer controle.
+- Nada de `style=` no HTML e nada de em-dash em texto visivel.
 - `getUserMedia` exige HTTPS ou localhost. Para testar a camera no celular, use
   um tunel (`cloudflared tunnel --url http://localhost:8080`); nao adianta abrir
   pelo IP da rede.
