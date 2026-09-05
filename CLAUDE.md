@@ -159,6 +159,15 @@ vale tambem para arquivo estatico.
   um tunel (`cloudflared tunnel --url http://localhost:8080`); nao adianta abrir
   pelo IP da rede.
 
+## Testes com estado em memoria
+
+`LoginAttemptService` guarda contagem num bean singleton. O truncate do
+`AbstractDatabaseTest` limpa o banco, **nao** limpa mapa em memoria: testes que
+compartilham a mesma chave se contaminam. Use um e-mail por teste.
+
+Comportamento dependente de tempo tem `Clock` injetado — teste avancando o
+relogio, nunca `Thread.sleep`, que e lento e fica intermitente no CI carregado.
+
 ## Verificacao
 
 ```

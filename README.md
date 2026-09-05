@@ -147,6 +147,26 @@ senha `portaria-dev-2026` — dado de demonstracao, nunca de producao.
 Em producao nao ha auto-cadastro: o primeiro organizador vem de
 `APP_BOOTSTRAP_ORGANIZER_EMAIL` e `APP_BOOTSTRAP_ORGANIZER_PASSWORD`.
 
+### Freio de forca bruta
+
+O login conta tentativas falhas e devolve `429` com `Retry-After`. Duas
+contagens, com propositos diferentes: por **(IP, e-mail)**, que protege uma
+conta de ter a senha adivinhada, e por **IP**, que pega o atacante variando o
+e-mail a cada tentativa — caso que a primeira contagem nao enxerga.
+
+Tres decisoes:
+
+- **A checagem vem antes do BCrypt.** O hash e lento de proposito; sem o freio,
+  cada tentativa custa muito mais CPU nossa do que do atacante.
+- **Conta inexistente tambem e bloqueada.** Se so as existentes travassem, o
+  bloqueio viraria o oraculo que a mensagem generica de credenciais evita.
+- **O bloqueio expira sozinho.** Permanente, o freio seria uma arma: errar a
+  senha de alguem cinco vezes deixaria a pessoa de fora ate alguem intervir.
+
+A contagem e em memoria — suficiente para uma instancia, que e como este projeto
+roda. Com varias replicas, cada uma teria a sua contagem e o limite efetivo
+seria multiplicado; ai o lugar disso e um Redis.
+
 ### Quem pode o que
 
 | | ORGANIZER | GATE | BUYER |
@@ -249,6 +269,7 @@ conferi que o teste realmente falha:
 | tirar `@PreAuthorize` de `/stats` | portaria e comprador passam a ler a receita do evento |
 | tirar a checagem de dono do pedido | um comprador le e cancela o pedido de outro |
 | tirar o `UNIQUE` e usar "verifica depois insere" | **10 das 20** notificacoes processam: o pedido e pago dez vezes |
+| desligar o freio de forca bruta | 5 dos 6 testes quebram; o pior deles: a senha correta entra depois de tentativas ilimitadas |
 
 A ultima mutacao passou despercebida na primeira tentativa: a linha estava
 escrita, como o SPEC pede, mas nenhum teste dependia dela. O teste de

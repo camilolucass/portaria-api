@@ -17,6 +17,12 @@ app:
     # sem valor padrao em arquivo versionado, igual ao QR_SECRET (SPEC 7.2)
     secret: ${JWT_SECRET:}
     expiration-minutes: 60
+  login:
+    # freio de forca bruta. Duas contagens: uma protege a conta, a outra impede
+    # varredura de muitos e-mails a partir do mesmo endereco
+    max-attempts-per-account: 5
+    max-attempts-per-address: 20
+    block-duration: 15m
   webhook:
     # segredo compartilhado com o gateway; sem valor padrao versionado
     secret: ${WEBHOOK_SECRET:}
