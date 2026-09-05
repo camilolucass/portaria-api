@@ -29,6 +29,9 @@ demonstração, uma por papel. A senha das três é `portaria-dev-2026`.
 
 A API também pode ser explorada pelo Swagger, em http://localhost:8080/docs.
 
+Para olhar as tabelas por dentro, `docker compose --profile tools up pgadmin` sobe
+um pgAdmin em http://localhost:5050 com a conexão já cadastrada.
+
 ## Tecnologias
 
 Java 25 · Spring Boot 4 · Spring Security · PostgreSQL 16 · Flyway ·

@@ -1,5 +1,7 @@
 # docker compose up      -> banco e aplicacao, tudo de pe em http://localhost:8080
 # docker compose up db   -> so o Postgres, para rodar a aplicacao pela IDE
+# docker compose --profile tools up pgadmin
+#                        -> pgAdmin em http://localhost:5050, para ver as tabelas
 #
 # Os segredos vem do arquivo .env, que o Compose le sozinho. Nao ha valor
 # padrao: a sintaxe :? faz o Compose parar com uma mensagem util quando falta,
@@ -43,5 +45,30 @@ services:
     ports: ["8080:8080"]
     restart: unless-stopped
 
+  # Navegador visual do banco, em http://localhost:5050. Fica fora do
+  # `docker compose up`: so sobe quando o profile e pedido, com
+  #   docker compose --profile tools up pgadmin
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: portaria-pgadmin
+    profiles: ["tools"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@portaria.local
+      PGADMIN_DEFAULT_PASSWORD: portaria
+      # ferramenta local: abre direto no navegador, sem tela de login nem
+      # senha mestra. Nao use esta configuracao em rede compartilhada
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    volumes:
+      # deixa a conexao com o banco ja cadastrada. Lido apenas na primeira
+      # subida, quando o volume pgadmin ainda esta vazio
+      - ./docker/pgadmin-servers.json:/pgadmin4/servers.json:ro
+      - pgadmin:/var/lib/pgadmin
+    ports: ["5050:80"]
+
 volumes:
   pgdata:
+  pgadmin:
