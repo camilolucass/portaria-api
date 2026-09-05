@@ -29,13 +29,24 @@ Java 25 · Spring Boot 4.1.1 · PostgreSQL 16 · Flyway · Spring Data JPA com
 
 ## Rodando
 
-```bash
-cp .env.example .env          # e troque QR_SECRET e JWT_SECRET por valores aleatorios
-docker compose up -d          # Postgres 16 em localhost:5432
+Precisa apenas de **Docker**. Nao e necessario ter Java instalado.
 
+```bash
+cp .env.example .env    # e troque os tres segredos por valores aleatorios
+docker compose up       # banco e aplicacao
+```
+
+Para desenvolver com a aplicacao pela IDE, subindo so o banco:
+
+```bash
+docker compose up -d db
 export $(grep -v '^#' .env | xargs)
 SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
 ```
+
+Os segredos vem do `.env`, que o Compose le sozinho. Nao ha valor padrao: se
+faltar, o Compose para com a mensagem dizendo o que fazer, em vez de subir com
+um segredo previsivel.
 
 - **Interface: http://localhost:8080** — login, painel do organizador,
   compra com QR e tela de portaria
