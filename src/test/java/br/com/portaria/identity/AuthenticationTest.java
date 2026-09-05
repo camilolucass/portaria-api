@@ -152,11 +152,45 @@ class AuthenticationTest extends AbstractDatabaseTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * O ataque obvio contra JWT: editar as claims para se promover.
+     *
+     * Nao adianta trocar o ULTIMO caractere da assinatura. Os 32 bytes do
+     * HMAC-SHA256 ocupam 43 caracteres em Base64url, e o ultimo carrega apenas
+     * 4 bits uteis — os outros 2 sao ignorados na decodificacao. Trocar esse
+     * caractere as vezes altera so os bits ignorados, a assinatura decodifica
+     * igual e o token continua valido. Como iat e exp mudam a cada execucao,
+     * um teste assim vira sorteio: passou local e falhou no CI.
+     */
+    @Test
+    void tokenComClaimsEditadasDevolve401() throws Exception {
+        String[] parts = tokenFor(Role.BUYER).split("[.]");
+        var decoder = java.util.Base64.getUrlDecoder();
+        var encoder = java.util.Base64.getUrlEncoder().withoutPadding();
+
+        String payload = new String(decoder.decode(parts[1]), java.nio.charset.StandardCharsets.UTF_8);
+        String promovido = payload.replace("\"BUYER\"", "\"ORGANIZER\"");
+        assertThat(promovido).isNotEqualTo(payload);
+
+        String forjado = parts[0] + "."
+                + encoder.encodeToString(promovido.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+                + "." + parts[2];
+
+        mockMvc.perform(get("/api/v1/events").header("Authorization", "Bearer " + forjado))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.title").value("Nao autenticado"));
+    }
+
+    /** Byte trocado no meio da assinatura, onde nao ha bit ignorado. */
     @Test
     void tokenComAssinaturaAlteradaDevolve401() throws Exception {
         String token = tokenFor(Role.ORGANIZER);
-        String adulterado = token.substring(0, token.length() - 1)
-                + (token.endsWith("A") ? "B" : "A");
+        int signatureStart = token.lastIndexOf('.') + 1;
+        int target = signatureStart + 5;
+        char current = token.charAt(target);
+        String adulterado = token.substring(0, target)
+                + (current == 'A' ? 'B' : 'A')
+                + token.substring(target + 1);
 
         mockMvc.perform(get("/api/v1/events").header("Authorization", "Bearer " + adulterado))
                 .andExpect(status().isUnauthorized())

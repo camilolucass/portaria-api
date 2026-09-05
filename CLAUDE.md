@@ -129,6 +129,11 @@ Spring Security e **7.1.1**, nao o 6 do SPEC: e o que o Boot 4 traz.
   apagada respondia 500 em vez de 403.
 - **`@IdClass` nao aceita `record`.** O JPA le a chave no padrao JavaBean, e
   `event()`/`user()` nao atendem. `EventStaff.EventStaffId` e classe comum.
+- **Nao teste JWT adulterado trocando o ULTIMO caractere da assinatura.** Os 32
+  bytes do HMAC-SHA256 ocupam 43 caracteres em Base64url e o ultimo carrega so
+  4 bits uteis; trocar esse caractere pode alterar apenas os bits ignorados, e o
+  token continua valido. Como `iat`/`exp` mudam a cada execucao, o teste vira
+  sorteio — passou local e falhou no CI. Edite as claims ou um caractere do meio.
 - **`NimbusJwtEncoder` assume RS256.** Com chave HMAC e preciso declarar
   `JwsHeader.with(MacAlgorithm.HS256)` nos parametros, senao todo token falha com
   "Failed to select a JWK signing key".
