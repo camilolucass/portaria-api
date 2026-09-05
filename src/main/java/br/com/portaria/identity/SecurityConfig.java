@@ -57,6 +57,11 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         // a documentacao descreve a API, nao expoe dado: fica aberta
                         .requestMatchers("/docs", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        // as paginas sao HTML e JS estaticos, sem nenhum dado dentro:
+                        // tudo que elas mostram vem da API, que continua exigindo token
+                        .requestMatchers("/", "/index.html", "/*.css", "/*.js",
+                                "/organizador.html", "/comprador.html", "/portaria.html",
+                                "/favicon.ico").permitAll()
                         // qualquer rota nova nasce fechada, e nao aberta por esquecimento
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2

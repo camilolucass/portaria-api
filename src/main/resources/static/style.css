@@ -1,0 +1,127 @@
+:root {
+    --bg: #0f1115;
+    --surface: #171a21;
+    --surface-2: #1e222b;
+    --line: #2a2f3a;
+    --text: #e8eaed;
+    --muted: #9aa3b2;
+    --accent: #5b8cff;
+    --ok: #1f9d55;
+    --danger: #d64545;
+    --warn: #c9962a;
+    --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 1.25rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+}
+
+header h1 { font-size: 1rem; margin: 0; font-weight: 600; }
+header .who { color: var(--muted); font-size: 0.85rem; }
+
+main { max-width: 960px; margin: 0 auto; padding: 1.25rem; }
+
+section {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.1rem;
+    margin-bottom: 1.1rem;
+}
+
+h2 { font-size: 0.95rem; margin: 0 0 0.9rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+
+label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.25rem; }
+
+input, select {
+    width: 100%;
+    padding: 0.55rem 0.7rem;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    font: inherit;
+}
+
+input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.7rem; margin-bottom: 0.7rem; }
+
+button {
+    padding: 0.55rem 0.95rem;
+    background: var(--accent);
+    color: #fff;
+    border: 0;
+    border-radius: 8px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+button:hover { filter: brightness(1.1); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.ghost { background: transparent; border: 1px solid var(--line); color: var(--text); font-weight: 500; }
+
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th, td { text-align: left; padding: 0.5rem 0.4rem; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 500; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+
+.tag { display: inline-block; padding: 0.1rem 0.45rem; border-radius: 999px; font-size: 0.72rem; border: 1px solid var(--line); color: var(--muted); }
+.tag.PUBLISHED { color: #7fd6a2; border-color: #2f5c44; }
+.tag.DRAFT { color: var(--warn); border-color: #5c4a1f; }
+
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.7rem; }
+.metric { background: var(--surface-2); border-radius: 8px; padding: 0.8rem; }
+.metric .v { font-size: 1.5rem; font-weight: 700; }
+.metric .k { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+.msg { padding: 0.6rem 0.8rem; border-radius: 8px; font-size: 0.88rem; margin-top: 0.7rem; }
+.msg.error { background: #3a1d1d; color: #ffb4b4; }
+.msg.ok { background: #14331f; color: #a5e7c0; }
+.muted { color: var(--muted); font-size: 0.85rem; }
+
+/* login ------------------------------------------------------------------ */
+.login { max-width: 380px; margin: 12vh auto; }
+.login p.hint { font-size: 0.8rem; color: var(--muted); line-height: 1.6; }
+
+/* portaria --------------------------------------------------------------- */
+#reader { width: 100%; max-width: 460px; margin: 0 auto; border-radius: var(--radius); overflow: hidden; }
+
+/* o retorno da portaria e a tela inteira: quem opera olha de longe, com o
+   celular na mao e fila na frente. Cor e o unico canal que funciona assim. */
+#verdict {
+    position: fixed;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+    z-index: 50;
+}
+#verdict.show { display: flex; }
+#verdict.granted { background: var(--ok); }
+#verdict.denied { background: var(--danger); }
+#verdict .icon { font-size: 5rem; line-height: 1; }
+#verdict .title { font-size: 2rem; font-weight: 800; margin: 0.5rem 0; }
+#verdict .detail { font-size: 1.05rem; opacity: 0.95; max-width: 30ch; }
+#verdict .holder { font-size: 1.4rem; font-weight: 600; margin-top: 0.5rem; }
+
+.qr { display: block; margin: 0.8rem auto; background: #fff; padding: 8px; border-radius: 8px; }
+code.code { display: block; word-break: break-all; font-size: 0.75rem; color: var(--muted); margin-top: 0.4rem; }

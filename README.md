@@ -37,6 +37,8 @@ export $(grep -v '^#' .env | xargs)
 SPRING_PROFILES_ACTIVE=dev ./mvnw spring-boot:run
 ```
 
+- **Interface: http://localhost:8080** — login, painel do organizador,
+  compra com QR e tela de portaria
 - Swagger UI: http://localhost:8080/docs
 - OpenAPI: http://localhost:8080/v3/api-docs
 - Health: http://localhost:8080/actuator/health
@@ -86,6 +88,35 @@ tres variaveis funciona com Fly Postgres, Neon, Supabase ou qualquer outro.
 
 **Producao nao usa o perfil `dev`**, entao nenhum dado de demonstracao e criado.
 A unica conta que nasce e o organizador do `APP_BOOTSTRAP_ORGANIZER_*`.
+
+## Interface
+
+Tres telas, servidas pelo proprio Spring a partir de `src/main/resources/static`.
+HTML, CSS e JavaScript sem framework e sem build: o back-end e o assunto deste
+projeto, e um bundler aqui so acrescentaria passo de build, CORS e um segundo
+artefato para versionar.
+
+| Tela | O que faz |
+|---|---|
+| `/` | Login. Emite o JWT e manda cada papel para a sua tela |
+| `/organizador.html` | Eventos, publicacao, lotes e o painel com receita e presenca |
+| `/comprador.html` | Compra, pagamento simulado e o QR do ingresso |
+| `/portaria.html` | Le a camera e responde verde ou vermelho em tela cheia |
+
+Tres detalhes que a interface obrigou a resolver:
+
+- **O PNG do QR exige `Authorization`**, e o navegador nao manda cabecalho em
+  `<img src>`. A imagem vem por `fetch`, vira `Blob` e depois object URL.
+- **`getUserMedia` so funciona em contexto seguro** — HTTPS ou `localhost`.
+  Aberta pelo IP da rede local, a camera e bloqueada pelo navegador, entao a tela
+  diz isso explicitamente e oferece entrada manual do codigo, em vez de mostrar
+  um leitor morto sem explicacao.
+- **A camera dispara varias leituras por segundo.** Sem uma trava enquanto o
+  resultado esta na tela, uma unica pessoa geraria dezenas de requisicoes de
+  check-in — e todas menos a primeira voltariam 409.
+
+O retorno da portaria ocupa a tela inteira porque quem opera olha de relance,
+com o celular na mao e fila na frente: cor e o unico canal que funciona assim.
 
 ## Rotas
 

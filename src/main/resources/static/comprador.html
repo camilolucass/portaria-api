@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Portaria — comprar ingresso</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+    <h1></h1>
+    <div style="display:flex;gap:0.8rem;align-items:center">
+        <span class="who"></span>
+        <button class="ghost" id="logout">Sair</button>
+    </div>
+</header>
+
+<main>
+    <section>
+        <h2>Eventos a venda</h2>
+        <div class="row">
+            <div>
+                <label for="event">Evento</label>
+                <select id="event"></select>
+            </div>
+            <div>
+                <label for="batch">Lote</label>
+                <select id="batch"></select>
+            </div>
+            <div>
+                <label for="quantity">Quantidade</label>
+                <select id="quantity">
+                    <option>1</option><option>2</option><option>3</option>
+                    <option>4</option><option>5</option><option>6</option>
+                </select>
+            </div>
+        </div>
+        <p class="muted" id="batchInfo"></p>
+    </section>
+
+    <section>
+        <h2>Titulares</h2>
+        <p class="muted">Um nome por ingresso — a API recusa com 400 se a contagem nao bater.</p>
+        <div id="holders"></div>
+
+        <h2 style="margin-top:1.2rem">Comprador</h2>
+        <div class="row">
+            <div><label for="buyerName">Nome</label><input id="buyerName" value="Lucas Camilo"></div>
+            <div><label for="buyerEmail">E-mail</label><input id="buyerEmail" type="email" value="lucas@exemplo.com"></div>
+            <div><label for="buyerDocument">Documento</label><input id="buyerDocument" value="12345678900"></div>
+        </div>
+
+        <button id="buy">Comprar e pagar</button>
+        <span class="muted" style="margin-left:0.6rem">
+            reserva o estoque, depois confirma o pagamento
+        </span>
+        <div id="msg" class="msg" hidden></div>
+    </section>
+
+    <section id="ticketsSection" hidden>
+        <h2>Meus ingressos</h2>
+        <div id="tickets"></div>
+    </section>
+</main>
+
+<script type="module">
+    import { api, auth, brl, escapeHtml, mountHeader, showMessage } from '/api.js';
+
+    auth.require();
+    mountHeader('Comprar ingresso');
+
+    const eventSelect = document.querySelector('#event');
+    const batchSelect = document.querySelector('#batch');
+    const quantitySelect = document.querySelector('#quantity');
+    const msg = document.querySelector('#msg');
+
+    let batches = [];
+
+    function renderHolders() {
+        const total = Number(quantitySelect.value);
+        document.querySelector('#holders').innerHTML = Array.from({ length: total }, (_, i) => `
+            <div class="row">
+                <div><label for="h${i}">Titular ${i + 1}</label><input id="h${i}" value="Titular ${i + 1}"></div>
+            </div>`).join('');
+    }
+
+    async function loadEvents() {
+        const page = await api.get('/api/v1/events?size=50');
+        eventSelect.innerHTML = page.content
+            .map((e) => `<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('');
+        if (page.content.length) await loadBatches();
+    }
+
+    async function loadBatches() {
+        batches = await api.get(`/api/v1/events/${eventSelect.value}/batches`);
+        batchSelect.innerHTML = batches
+            .map((b) => `<option value="${b.id}">${escapeHtml(b.name)}</option>`).join('');
+        showBatchInfo();
+    }
+
+    function showBatchInfo() {
+        const batch = batches.find((b) => b.id === batchSelect.value);
+        document.querySelector('#batchInfo').textContent = batch
+            ? `${brl(batch.priceCents)} — ${batch.availableQuantity} de ${batch.totalQuantity} disponiveis`
+            : 'Este evento ainda nao tem lotes.';
+    }
+
+    /** O PNG exige token, entao a imagem vem por fetch e vira object URL. */
+    async function renderTickets(order) {
+        document.querySelector('#ticketsSection').hidden = false;
+        const container = document.querySelector('#tickets');
+        container.innerHTML = '';
+
+        for (const ticket of order.tickets) {
+            const detail = await api.get(`/api/v1/tickets/${ticket.id}`);
+            const src = await api.qrCodeUrl(ticket.id);
+            const card = document.createElement('div');
+            card.style.cssText = 'display:inline-block;text-align:center;margin:0 1rem 1rem 0';
+            card.innerHTML = `
+                <img class="qr" src="${src}" alt="QR do ingresso" width="220" height="220">
+                <strong>${escapeHtml(detail.holderName)}</strong>
+                <code class="code">${escapeHtml(detail.code)}</code>`;
+            container.appendChild(card);
+        }
+    }
+
+    eventSelect.addEventListener('change', () => loadBatches().catch((e) => showMessage(msg, e.message)));
+    batchSelect.addEventListener('change', showBatchInfo);
+    quantitySelect.addEventListener('change', renderHolders);
+
+    document.querySelector('#buy').addEventListener('click', async () => {
+        msg.hidden = true;
+        const quantity = Number(quantitySelect.value);
+        try {
+            const order = await api.post('/api/v1/orders', {
+                batchId: batchSelect.value,
+                quantity,
+                buyer: {
+                    name: document.querySelector('#buyerName').value,
+                    email: document.querySelector('#buyerEmail').value,
+                    document: document.querySelector('#buyerDocument').value,
+                },
+                holders: Array.from({ length: quantity }, (_, i) => ({
+                    name: document.querySelector(`#h${i}`).value,
+                })),
+            });
+
+            // RN-07: o ingresso so nasce na transicao para PAID
+            const paid = await api.post(`/api/v1/orders/${order.id}/pay`);
+            showMessage(msg, `Pedido pago — ${paid.tickets.length} ingresso(s) emitido(s).`, 'ok');
+            await renderTickets(paid);
+            await loadBatches();
+        } catch (error) {
+            showMessage(msg, `${error.title}: ${error.message}`);
+        }
+    });
+
+    renderHolders();
+    loadEvents().catch((error) => showMessage(msg, error.message));
+</script>
+</body>
+</html>

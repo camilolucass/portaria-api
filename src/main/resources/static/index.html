@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Portaria — entrar</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main class="login">
+    <section>
+        <h2>Portaria</h2>
+        <form id="form">
+            <div style="margin-bottom:0.7rem">
+                <label for="email">E-mail</label>
+                <input id="email" type="email" autocomplete="username" required>
+            </div>
+            <div style="margin-bottom:1rem">
+                <label for="password">Senha</label>
+                <input id="password" type="password" autocomplete="current-password" required>
+            </div>
+            <button type="submit" id="submit" style="width:100%">Entrar</button>
+        </form>
+        <div id="msg" class="msg" hidden></div>
+        <p class="hint" id="hint"></p>
+    </section>
+</main>
+
+<script type="module">
+    import { api, auth, showMessage } from '/api.js';
+
+    const form = document.querySelector('#form');
+    const submit = document.querySelector('#submit');
+    const msg = document.querySelector('#msg');
+
+    // as contas de demonstracao so existem sob o perfil dev; em producao esta
+    // dica nao aparece, porque o endpoint responde 401 para elas
+    document.querySelector('#hint').textContent =
+        'Contas do perfil dev: organizador@exemplo.com, portaria@exemplo.com ou '
+        + 'comprador@exemplo.com — senha portaria-dev-2026.';
+
+    /** Cada papel tem uma tela. Quem acumula papeis cai na mais completa. */
+    function destinationFor(roles) {
+        if (roles.includes('ORGANIZER')) return '/organizador.html';
+        if (roles.includes('GATE')) return '/portaria.html';
+        return '/comprador.html';
+    }
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        msg.hidden = true;
+        submit.disabled = true;
+        try {
+            const session = await api.login(
+                document.querySelector('#email').value,
+                document.querySelector('#password').value);
+            auth.save(session.token, session.roles);
+            location.replace(destinationFor(session.roles));
+        } catch (error) {
+            showMessage(msg, error.message);
+            submit.disabled = false;
+        }
+    });
+</script>
+</body>
+</html>

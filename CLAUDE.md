@@ -139,6 +139,19 @@ Spring Security e **7.1.1**, nao o 6 do SPEC: e o que o Boot 4 traz.
   padrao do ZXing e feito para fotos e falha em ~1,5% das imagens sinteticas,
   dependendo do conteudo. Sem a hint, o teste vira um sorteio.
 
+## Interface
+
+`src/main/resources/static`: HTML/CSS/JS sem framework, servido pelo Spring.
+Sem build, sem CORS, um artefato so. Ao criar pagina nova, libere o caminho no
+`SecurityConfig` — `anyRequest().authenticated()` fecha tudo por padrao, e isso
+vale tambem para arquivo estatico.
+
+- O PNG do QR exige `Authorization`: use `fetch` + `Blob` + object URL, nunca
+  `<img src>` direto.
+- `getUserMedia` exige HTTPS ou localhost. Para testar a camera no celular, use
+  um tunel (`cloudflared tunnel --url http://localhost:8080`); nao adianta abrir
+  pelo IP da rede.
+
 ## Verificacao
 
 ```
