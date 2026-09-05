@@ -56,7 +56,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@portaria.local
+      PGADMIN_DEFAULT_EMAIL: admin@exemplo.com
       PGADMIN_DEFAULT_PASSWORD: portaria
       # ferramenta local: abre direto no navegador, sem tela de login nem
       # senha mestra. Nao use esta configuracao em rede compartilhada
