@@ -72,7 +72,9 @@ mesmo código ao mesmo tempo, exatamente uma entrada é liberada.
 
 **4. O gateway de pagamento reenviando a notificação.** Gateways garantem "pelo
 menos uma entrega", nunca "exatamente uma". Um `UNIQUE` na tabela de
-notificações processadas faz a repetição não pagar o pedido de novo.
+notificações processadas faz a repetição não pagar o pedido de novo. A
+confirmação em si é simulada: o webhook e a idempotência estão prontos, a
+integração com um gateway real não.
 
 ## Testes
 
@@ -122,18 +124,6 @@ src/main/java/br/com/portaria/
 
 Um pacote por assunto, e não por camada. As migrations do banco ficam em
 `src/main/resources/db/migration`, e o front em `src/main/resources/static`.
-
-## Estado e próximos passos
-
-Funciona de ponta a ponta: comprar, gerar o QR, validar na portaria e ver os
-números no painel.
-
-O que ainda não fiz:
-
-- **Integração real com o Mercado Pago.** A confirmação de pagamento hoje é
-  simulada, mas o webhook e a idempotência já estão prontos
-- **Deploy.** Não publiquei porque uma aplicação Java com PostgreSQL não cabe
-  bem nas opções gratuitas, e um link fora do ar seria pior que nenhum link
 
 ## Notas
 
