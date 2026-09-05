@@ -1,11 +1,5 @@
 # Portaria — Especificação Técnica v1
 
-> **Como usar este documento:** salve como `SPEC.md` na raiz do repositório vazio e abra o Claude Code nessa pasta.
-> Prompt inicial sugerido:
-> *"Leia SPEC.md por completo. Implemente apenas a Fase 1, na ordem das etapas da seção 11. Não avance de etapa sem que os testes da etapa anterior passem. Não implemente nada marcado como Fase 2 ou Fase 3."*
-
----
-
 ## 1. Objetivo
 
 API REST para **venda de ingressos e controle de entrada por QR Code** em eventos.

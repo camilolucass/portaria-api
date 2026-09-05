@@ -5,9 +5,9 @@
 API e interface para venda de ingressos e controle de entrada por QR Code em
 eventos.
 
-Projeto de estudo, construído a partir de uma especificação técnica
-([SPEC.md](SPEC.md)) para praticar as partes de back-end que um CRUD não
-exercita: concorrência, autenticação e integridade de dados.
+Projeto de estudo. Parti de uma especificação técnica ([SPEC.md](SPEC.md)) e
+implementei o sistema inteiro para praticar as partes de back-end que um CRUD
+não exercita: concorrência, autenticação e integridade de dados.
 
 ## Rodando
 
@@ -138,6 +138,6 @@ O que ainda não fiz:
 ## Notas
 
 O projeto roda em Java 25 com Spring Boot 4, enquanto a especificação pede
-Java 21 com Boot 3.3. Foi decisão de ambiente. As diferenças que isso trouxe,
-e as outras decisões que tomei fora do que a especificação dizia, estão
-anotadas no [CLAUDE.md](CLAUDE.md).
+Java 21 com Boot 3.3. Foi decisão de ambiente. Essas diferenças, e as outras
+decisões que tomei fora do que a especificação dizia, estão registradas em
+[DECISOES.md](DECISOES.md).
