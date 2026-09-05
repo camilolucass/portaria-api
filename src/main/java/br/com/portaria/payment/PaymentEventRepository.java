@@ -27,6 +27,4 @@ public interface PaymentEventRepository extends JpaRepository<PaymentEvent, Long
     int recordIfNew(@Param("externalId") String externalId,
                     @Param("orderId") Long orderId,
                     @Param("status") String status);
-
-    boolean existsByExternalId(String externalId);
 }

@@ -81,24 +81,27 @@ docker run --rm --network portaria-api_default -p 8080:8080 \
 Imagem multi-stage, ~132 MB, rodando como usuario nao-root com
 `TZ=America/Sao_Paulo`.
 
-### Deploy (Fly.io)
+### Deploy
 
-O `fly.toml` sobe **uma** instancia na regiao `gru`. Uma so, de proposito: o job
-de expiracao roda em toda replica e o Flyway migra no boot.
+**Este projeto nao esta publicado em lugar nenhum, de proposito.** Ele e uma JVM
+com Postgres, e nao existe combinacao gratuita que sustente isso com dignidade:
+o Postgres gratuito do Render expira em 30 dias, e o servico web hiberna em 15
+minutos, levando cerca de um minuto para acordar. Um link de demonstracao que
+demora um minuto — ou que esta fora do ar daqui a tres meses — vale menos que
+nenhum link.
 
-```bash
-fly apps create portaria-api          # o nome e global; troque se estiver tomado
-fly postgres create --region gru      # ou qualquer Postgres 16 gerenciado
-fly secrets set   DB_URL="jdbc:postgresql://HOST:5432/portaria"   DB_USER="..." DB_PASSWORD="..."   QR_SECRET="$(openssl rand -base64 48)"   JWT_SECRET="$(openssl rand -base64 48)"   APP_BOOTSTRAP_ORGANIZER_EMAIL="voce@exemplo.com"   APP_BOOTSTRAP_ORGANIZER_PASSWORD="uma-senha-longa-de-verdade"
-fly deploy
-```
+O `fly.toml` no repositorio e a configuracao real que o deploy usaria: uma
+instancia em `gru`, `auto_stop_machines` desligado porque a JVM leva ~10s para
+subir, `grace_period` de 45s no health check pelo mesmo motivo, e
+`MaxRAMPercentage` para a JVM enxergar a memoria do container e nao a do host.
 
-`DB_URL` e informado explicitamente em formato JDBC. O `DATABASE_URL` que os
-provedores expoem vem como `postgres://`, que o Spring nao aceita — separar as
-tres variaveis funciona com Fly Postgres, Neon, Supabase ou qualquer outro.
+Para publicar, o caminho e criar o app, provisionar um Postgres e definir
+`DB_URL` (em JDBC — o `DATABASE_URL` dos provedores vem como `postgres://`, que
+o Spring nao aceita), `DB_USER`, `DB_PASSWORD`, `QR_SECRET`, `JWT_SECRET`,
+`WEBHOOK_SECRET` e o par `APP_BOOTSTRAP_ORGANIZER_EMAIL` / `_PASSWORD`.
 
-**Producao nao usa o perfil `dev`**, entao nenhum dado de demonstracao e criado.
-A unica conta que nasce e o organizador do `APP_BOOTSTRAP_ORGANIZER_*`.
+**Producao nao usa o perfil `dev`**, entao nenhum dado de demonstracao e criado:
+a unica conta que nasce e a do bootstrap.
 
 ## Interface
 
@@ -140,7 +143,7 @@ com o celular na mao e fila na frente: cor e o unico canal que funciona assim.
 | POST | `/api/v1/events/{eventPublicId}/batches` | 201 / 422 |
 | GET | `/api/v1/events/{eventPublicId}/batches` | 200, com `availableQuantity` |
 | POST | `/api/v1/orders` | reserva estoque — 201 / 409 / 422 / 400 |
-| POST | `/api/v1/orders/{publicId}/pay` | emite os ingressos — 200 / 409 |
+| POST | `/api/v1/orders/{publicId}/pay` | confirmacao simulada — 200 / 409 |
 | POST | `/api/v1/orders/{publicId}/cancel` | RN-08 — 200 / 409 |
 | GET | `/api/v1/orders/{publicId}` | 200 com os ingressos / 404 |
 | GET | `/api/v1/tickets/{publicId}` | 200 com o `code` assinado / 404 |
@@ -191,6 +194,11 @@ seria multiplicado; ai o lugar disso e um Redis.
 Falta de papel devolve **403**. Recurso de outra conta devolve **404**, e nao
 403: um 403 confirmaria que aquele identificador existe, permitindo mapear
 eventos, pedidos e ingressos alheios so variando o UUID.
+
+`POST /orders/{id}/pay` e o webhook coexistem: o `/pay` e a confirmacao simulada
+da Fase 1, util para exercitar o fluxo pela interface sem gateway. Com a
+integracao real, ele sai — a emissao de ingressos ja vive num unico lugar
+(`OrderService.issueTicketsFor`), chamado pelos dois caminhos.
 
 Erros seguem RFC 7807 (`application/problem+json`), com `title` em portugues.
 
