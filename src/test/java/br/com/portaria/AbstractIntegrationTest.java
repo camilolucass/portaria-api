@@ -41,6 +41,7 @@ public abstract class AbstractIntegrationTest {
     /** Segredos de teste, fixos e obviamente falsos. Em producao vem do ambiente. */
     protected static final String QR_SECRET = "segredo-de-teste-com-mais-de-32-caracteres";
     protected static final String JWT_SECRET = "segredo-jwt-de-teste-com-mais-de-32-caracteres";
+    protected static final String WEBHOOK_SECRET = "segredo-de-webhook-de-teste";
 
     @DynamicPropertySource
     static void applicationProperties(DynamicPropertyRegistry registry) {
@@ -49,6 +50,7 @@ public abstract class AbstractIntegrationTest {
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("app.qr.secret", () -> QR_SECRET);
         registry.add("app.jwt.secret", () -> JWT_SECRET);
+        registry.add("app.webhook.secret", () -> WEBHOOK_SECRET);
     }
 
     @Autowired

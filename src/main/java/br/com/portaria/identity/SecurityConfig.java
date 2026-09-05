@@ -55,6 +55,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        // o gateway nao faz login: quem protege esta rota e o
+                        // segredo compartilhado conferido no controller
+                        .requestMatchers(HttpMethod.POST, "/api/v1/webhooks/**").permitAll()
                         // a documentacao descreve a API, nao expoe dado: fica aberta
                         .requestMatchers("/docs", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         // as paginas sao HTML e JS estaticos, sem nenhum dado dentro:

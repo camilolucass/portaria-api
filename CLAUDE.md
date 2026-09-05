@@ -16,7 +16,9 @@ Se a tarefa pedida pertence a outra etapa, pare e diga a qual etapa ela pertence
 | 4 | `QrCodeSigner` (7.2), ZXing, `CheckinService` (7.3). TC-02 a TC-06. | `feat: qr assinado e check-in atomico` |
 | 5 | Swagger, seed `V2`, Actuator, README, GitHub Actions, Dockerfile. | — |
 
-**Status atual: Fase 1 e Fase 2 completas.** Proximo trabalho seria a Fase 3
+**Status atual: Fase 1, Fase 2 e o P4 (webhook idempotente) completos.** Da
+Fase 3 falta a integracao real com o Mercado Pago — a costura esta em
+`PaymentGateway`, e trocar a implementacao nao muda mais nada no fluxo. Proximo trabalho seria a Fase 3
 (Mercado Pago, webhook idempotente e front de portaria), que NAO deve ser
 iniciada sem pedido explicito. Proximo trabalho seria a Fase 2 (Spring Security + JWT), que NAO deve ser iniciada sem pedido explicito.
 

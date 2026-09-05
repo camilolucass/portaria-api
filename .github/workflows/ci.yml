@@ -15,6 +15,7 @@ jobs:
       # O segredo real vive fora do repositorio, como manda a secao 7.2 do SPEC.
       QR_SECRET: ci-secret-obviamente-falso-com-mais-de-32-caracteres
       JWT_SECRET: ci-jwt-secret-obviamente-falso-com-mais-de-32-caracteres
+      WEBHOOK_SECRET: ci-webhook-secret-obviamente-falso
 
     steps:
       - uses: actions/checkout@v4

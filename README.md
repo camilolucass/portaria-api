@@ -12,9 +12,9 @@ nao resolve:
 | **P1** | Dois compradores chegam juntos e o lote vende mais do que tem | `UPDATE` condicional atomico + `CHECK` no banco | [`TicketBatchRepository`](src/main/java/br/com/portaria/batch/TicketBatchRepository.java) |
 | **P2** | Alguem gera um QR Code falso | HMAC-SHA256 com comparacao em tempo constante | [`QrCodeSigner`](src/main/java/br/com/portaria/ticket/QrCodeSigner.java) |
 | **P3** | O mesmo ingresso entra duas vezes, em duas portarias ao mesmo tempo | `UPDATE ... WHERE status = 'ISSUED'` conferindo linhas afetadas | [`CheckinService`](src/main/java/br/com/portaria/checkin/CheckinService.java) |
-| **P4** | O gateway reenvia a mesma notificacao | tabela de eventos processados com `UNIQUE` | Fase 3 |
+| **P4** | O gateway reenvia a mesma notificacao | `INSERT ... ON CONFLICT DO NOTHING` em `payment_event` | [`PaymentWebhookService`](src/main/java/br/com/portaria/payment/PaymentWebhookService.java) |
 
-A Fase 1, completa aqui, entrega P1, P2 e P3. A especificacao esta em
+Os quatro estao resolvidos. A especificacao esta em
 [SPEC.md](SPEC.md); as regras de trabalho no repositorio, em
 [CLAUDE.md](CLAUDE.md).
 
@@ -137,6 +137,7 @@ com o celular na mao e fila na frente: cor e o unico canal que funciona assim.
 | POST | `/api/v1/checkins` | 200 GRANTED / 409 / 422 |
 | GET | `/api/v1/events/{eventPublicId}/stats` | painel do organizador — 200 / 404 |
 | POST | `/api/v1/auth/login` | emite o JWT — 200 / 401 |
+| POST | `/api/v1/webhooks/payments` | idempotente — 200 / 401 |
 
 **Toda rota de negocio exige `Authorization: Bearer <token>`.** Ficam abertas
 apenas o login, `/actuator/health` e a documentacao. Contas do perfil dev:
@@ -192,6 +193,35 @@ descobre qual dos quatro errou.
 O segredo vem de `QR_SECRET` e nunca e versionado. Troca-lo invalida todos os QR
 ja emitidos.
 
+### P4 — notificacao repetida
+
+Gateway de pagamento garante "pelo menos uma entrega", nunca "exatamente uma".
+Timeout da nossa ponta, deploy no meio do processamento, retry programado: a
+mesma notificacao volta. Sem defesa, o pedido e pago de novo e os ingressos sao
+emitidos de novo.
+
+```sql
+INSERT INTO payment_event (external_id, order_id, status)
+     VALUES (:externalId, :orderId, :status)
+ON CONFLICT (external_id) DO NOTHING
+```
+
+Uma linha afetada e a primeira entrega; zero e repeticao. Nao e "verificar se
+existe e depois inserir" — entre a verificacao e a insercao cabe outra
+requisicao, que e exatamente o problema.
+
+Duas decisoes acompanham:
+
+- **O corpo da notificacao nao decide nada.** Ele traz so um identificador; a
+  situacao vem de uma consulta ao gateway (`PaymentGateway`, onde o Mercado Pago
+  entra sem que o resto mude). Quem posta no webhook e a internet inteira, e um
+  corpo dizendo "aprovado" nao prova pagamento.
+- **A rota exige um segredo compartilhado** no cabecalho `X-Webhook-Secret`,
+  comparado em tempo constante. O gateway nao faz login, e sem isso qualquer um
+  marcaria pedidos como pagos com um `curl`.
+- **Repeticao responde 200.** Erro faria o gateway reenviar em backoff por horas
+  por algo ja resolvido: a resposta diz "recebi", nao "concordo".
+
 ### P3 — check-in atomico
 
 Mesmo principio do estoque, a condicao vai dentro do `UPDATE`:
@@ -218,6 +248,7 @@ conferi que o teste realmente falha:
 | devolver estoque sem reivindicar o pedido | 8 instancias do job devolvem o mesmo pedido: estoque cai de 9 para 1 em vez de 5 |
 | tirar `@PreAuthorize` de `/stats` | portaria e comprador passam a ler a receita do evento |
 | tirar a checagem de dono do pedido | um comprador le e cancela o pedido de outro |
+| tirar o `UNIQUE` e usar "verifica depois insere" | **10 das 20** notificacoes processam: o pedido e pago dez vezes |
 
 A ultima mutacao passou despercebida na primeira tentativa: a linha estava
 escrita, como o SPEC pede, mas nenhum teste dependia dela. O teste de

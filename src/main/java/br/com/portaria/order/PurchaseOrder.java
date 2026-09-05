@@ -81,6 +81,14 @@ public class PurchaseOrder {
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
 
+    /**
+     * Referencia que o gateway conhece. Vai na criacao da preferencia e volta
+     * na consulta ao pagamento, ligando a notificacao a este pedido.
+     */
+    @Column(name = "payment_reference", nullable = false, unique = true, updatable = false)
+    @Builder.Default
+    private UUID paymentReference = UUID.randomUUID();
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("holderIndex ASC")
     @Builder.Default

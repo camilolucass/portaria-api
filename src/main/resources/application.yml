@@ -17,6 +17,9 @@ app:
     # sem valor padrao em arquivo versionado, igual ao QR_SECRET (SPEC 7.2)
     secret: ${JWT_SECRET:}
     expiration-minutes: 60
+  webhook:
+    # segredo compartilhado com o gateway; sem valor padrao versionado
+    secret: ${WEBHOOK_SECRET:}
   qr:
     # sem valor padrao em arquivo versionado (SPEC 7.2). Usado a partir da Etapa 4.
     secret: ${QR_SECRET:}

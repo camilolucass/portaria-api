@@ -91,8 +91,22 @@ public class OrderService {
      */
     @Transactional
     public OrderResponse pay(UUID publicId) {
-        PurchaseOrder order = findEntity(publicId);
+        return issueTicketsFor(findEntity(publicId));
+    }
 
+    /**
+     * Confirmacao vinda do gateway, sem comprador autenticado na requisicao —
+     * quem chama e o webhook. A checagem de dono nao se aplica aqui: a
+     * autorizacao desse caminho e a assinatura do webhook mais a consulta ao
+     * gateway, feitas antes de chegar neste metodo.
+     */
+    @Transactional
+    public OrderResponse confirmPayment(PurchaseOrder order) {
+        return issueTicketsFor(order);
+    }
+
+    /** RN-07 vive aqui, e so aqui: os ingressos nascem na transicao para PAID. */
+    private OrderResponse issueTicketsFor(PurchaseOrder order) {
         if (order.getStatus() != OrderStatus.PENDING) {
             throw new InvalidOrderStatusException(
                     "Apenas um pedido PENDING pode ser pago. Situacao atual: %s."

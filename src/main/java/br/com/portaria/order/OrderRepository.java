@@ -14,6 +14,9 @@ public interface OrderRepository extends JpaRepository<PurchaseOrder, Long> {
 
     Optional<PurchaseOrder> findByPublicId(UUID publicId);
 
+    /** Usada pelo webhook: o gateway conhece o pedido por esta referencia. */
+    Optional<PurchaseOrder> findByPaymentReference(UUID paymentReference);
+
     /** Pedido de uma conta especifica. Base da checagem de dono. */
     Optional<PurchaseOrder> findByPublicIdAndUserId(UUID publicId, Long userId);
 
