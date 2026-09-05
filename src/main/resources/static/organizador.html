@@ -68,7 +68,12 @@
         <form id="batchForm" novalidate>
             <div class="row">
                 <div><label for="batchName">Nome</label><input id="batchName" required maxlength="60"></div>
-                <div><label for="priceCents">Preco em centavos</label><input id="priceCents" type="number" min="1" required></div>
+                <div>
+                    <label for="price">Preco (R$)</label>
+                    <input id="price" type="text" inputmode="decimal"
+                           placeholder="45,00" required aria-describedby="priceHelp">
+                    <p class="muted" id="priceHelp">Use virgula para os centavos.</p>
+                </div>
                 <div><label for="totalQuantity">Quantidade</label><input id="totalQuantity" type="number" min="1" required></div>
             </div>
             <div class="row">
@@ -82,7 +87,7 @@
 </main>
 
 <script type="module">
-    import { api, auth, brl, dateTime, escapeHtml, mountHeader, showMessage, withBusy } from '/api.js';
+    import { api, auth, brl, dateTime, escapeHtml, mountHeader, showMessage, toCents, withBusy } from '/api.js';
 
     auth.require();
     mountHeader('Painel do organizador');
@@ -191,11 +196,21 @@
         event.preventDefault();
         const msg = document.querySelector('#batchMsg');
         msg.hidden = true;
+
+        // a API fala centavos; a tela fala reais. A conversao acontece aqui,
+        // e valor invalido para antes de virar requisicao
+        const priceCents = toCents(document.querySelector('#price').value);
+        if (Number.isNaN(priceCents) || priceCents < 1) {
+            showMessage(msg, 'Informe um preco valido, como 45,00.');
+            document.querySelector('#price').focus();
+            return;
+        }
+
         try {
             await withBusy(document.querySelector('#batchSubmit'), 'Criando...', () =>
                 api.post(`/api/v1/events/${selected}/batches`, {
                     name: document.querySelector('#batchName').value,
-                    priceCents: Number(document.querySelector('#priceCents').value),
+                    priceCents,
                     totalQuantity: Number(document.querySelector('#totalQuantity').value),
                     salesStart: document.querySelector('#salesStart').value,
                     salesEnd: document.querySelector('#salesEnd').value,

@@ -138,6 +138,12 @@ Tres detalhes que a interface obrigou a resolver:
 
 - **O PNG do QR exige `Authorization`**, e o navegador nao manda cabecalho em
   `<img src>`. A imagem vem por `fetch`, vira `Blob` e depois object URL.
+- **A tela fala reais, a API fala centavos.** O SPEC fixa dinheiro em centavos
+  `int`, e isso nao muda: ponto flutuante para dinheiro vira divergencia que
+  ninguem rastreia. A conversao acontece no formulario, com aritmetica de
+  inteiros e sem multiplicar por 100 em float — `19.99 * 100` da
+  `1998.9999999999998` em JavaScript, e arredondar isso funciona quase sempre,
+  que e o pior tipo de bug de dinheiro.
 - **`getUserMedia` so funciona em contexto seguro** — HTTPS ou `localhost`.
   Aberta pelo IP da rede local, a camera e bloqueada pelo navegador, entao a tela
   diz isso explicitamente e oferece entrada manual do codigo, em vez de mostrar

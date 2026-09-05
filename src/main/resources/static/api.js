@@ -122,6 +122,26 @@ export function brl(cents) {
     return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+/**
+ * Converte o que a pessoa digitou em reais para centavos inteiros.
+ *
+ * Sem passar por ponto flutuante: `19.99 * 100` da 1998.9999999999998 em
+ * JavaScript, e arredondar isso funciona quase sempre, que e o pior tipo de
+ * bug de dinheiro. Aqui a parte inteira e a decimal sao lidas separadas e
+ * combinadas em aritmetica de inteiros.
+ *
+ * Aceita virgula ou ponto: quem digita em portugues escreve 45,00.
+ *
+ * @returns centavos, ou NaN se a entrada nao for um valor monetario valido
+ */
+export function toCents(value) {
+    const normalized = String(value ?? '').trim().replace(/\s/g, '').replace(',', '.');
+    if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return NaN;
+
+    const [reais, decimals = ''] = normalized.split('.');
+    return Number(reais) * 100 + Number(decimals.padEnd(2, '0'));
+}
+
 export function dateTime(value) {
     if (!value) return '-';
     return new Date(value).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
