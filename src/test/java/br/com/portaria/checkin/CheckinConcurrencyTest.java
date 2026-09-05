@@ -3,6 +3,8 @@ package br.com.portaria.checkin;
 import br.com.portaria.AbstractDatabaseTest;
 import br.com.portaria.batch.TicketBatchRepository;
 import br.com.portaria.event.EventRepository;
+import br.com.portaria.event.EventStaffRepository;
+import br.com.portaria.identity.AppUser;
 import br.com.portaria.order.BuyerRepository;
 import br.com.portaria.order.OrderRepository;
 import br.com.portaria.shared.exception.TicketAlreadyUsedException;
@@ -54,11 +56,16 @@ class CheckinConcurrencyTest extends AbstractDatabaseTest {
     @Autowired
     private OrderRepository orderRepository;
 
+    @Autowired
+    private EventStaffRepository eventStaffRepository;
+
     @Test
     void apenasUmaPortariaPodeLiberarOMesmoIngresso() throws Exception {
-        Ticket ticket = CheckinTestFixtures.issuedTicketWithOpenGate(
+        var scenario = CheckinTestFixtures.issuedTicketWithOpenGate(
                 eventRepository, batchRepository, buyerRepository, orderRepository,
-                ticketRepository, "12345678900");
+                ticketRepository, eventStaffRepository, userRepository, "12345678900");
+        Ticket ticket = scenario.ticket();
+        AppUser gate = scenario.gate();
         String code = signer.sign(ticket.getPublicId());
 
         ExecutorService pool = Executors.newFixedThreadPool(THREADS);
@@ -73,11 +80,12 @@ class CheckinConcurrencyTest extends AbstractDatabaseTest {
         AtomicInteger rejectedWithoutTimestamp = new AtomicInteger();
 
         for (int i = 0; i < THREADS; i++) {
-            final String operator = "portaria-" + i;
             pool.submit(() -> {
                 try {
+                    // todas as threads sao a mesma portaria, em terminais diferentes
+                    authenticateAs(gate);
                     start.await();
-                    checkinService.checkIn(code, operator);
+                    checkinService.checkIn(code);
                     granted.incrementAndGet();
                 } catch (TicketAlreadyUsedException expected) {
                     rejected.incrementAndGet();

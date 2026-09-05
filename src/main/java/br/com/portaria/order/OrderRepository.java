@@ -14,6 +14,9 @@ public interface OrderRepository extends JpaRepository<PurchaseOrder, Long> {
 
     Optional<PurchaseOrder> findByPublicId(UUID publicId);
 
+    /** Pedido de uma conta especifica. Base da checagem de dono. */
+    Optional<PurchaseOrder> findByPublicIdAndUserId(UUID publicId, Long userId);
+
     /**
      * Ordenado por id de proposito: o job roda em todas as instancias, e duas
      * instancias percorrendo os mesmos pedidos em ordens diferentes tomariam os

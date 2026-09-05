@@ -4,6 +4,8 @@ import br.com.portaria.AbstractDatabaseTest;
 import br.com.portaria.batch.TicketBatch;
 import br.com.portaria.batch.TicketBatchRepository;
 import br.com.portaria.event.EventRepository;
+import br.com.portaria.identity.AppUser;
+import br.com.portaria.identity.Role;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -53,8 +55,12 @@ class OrderExpirationConcurrencyTest extends AbstractDatabaseTest {
 
     @Test
     void estoqueNaoPodeVoltarEmDobroQuandoVariasInstanciasExpiramJuntas() throws Exception {
+        AppUser organizer = createUser("organizadora@exemplo.com", Role.ORGANIZER);
+        AppUser buyer = createUser("compradora@exemplo.com", Role.BUYER);
+        authenticateAs(buyer);
+
         TicketBatch batch = OrderTestFixtures.publishedBatchWithSlots(
-                eventRepository, batchRepository, 100, 4500);
+                eventRepository, batchRepository, organizer, 100, 4500);
 
         // um pedido pago, que segura estoque de verdade e nunca deve ser mexido
         var paid = orderService.create(

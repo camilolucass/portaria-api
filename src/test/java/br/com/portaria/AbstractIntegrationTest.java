@@ -1,11 +1,16 @@
 package br.com.portaria;
 
 import br.com.portaria.identity.AppUser;
+import br.com.portaria.identity.AppUserRepository;
 import br.com.portaria.identity.Role;
 import br.com.portaria.identity.TokenService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -55,6 +60,17 @@ public abstract class AbstractIntegrationTest {
     @Autowired
     protected TokenService tokenService;
 
+    @Autowired
+    protected AppUserRepository userRepository;
+
+    @Autowired
+    protected JwtDecoder jwtDecoder;
+
+    @org.junit.jupiter.api.AfterEach
+    void clearAuthentication() {
+        SecurityContextHolder.clearContext();
+    }
+
     protected String json(Object body) throws Exception {
         return objectMapper.writeValueAsString(body);
     }
@@ -74,13 +90,54 @@ public abstract class AbstractIntegrationTest {
     }
 
     /**
-     * Token assinado de verdade, pelo mesmo TokenService da aplicacao — assim o
-     * teste passa pelo filtro real em vez de simular a autenticacao.
+     * Cria uma conta real no banco. A autorizacao da Etapa 2 depende de
+     * identidade — dono do evento, dono do pedido, portaria vinculada — entao o
+     * usuario precisa existir de fato.
+     */
+    protected AppUser createUser(String email, Role... roles) {
+        return userRepository.save(AppUser.builder()
+                .name("Usuario " + email)
+                .email(email)
+                .passwordHash("{noop}nao-usado-em-teste")
+                .roles(roles.length == 0
+                        ? java.util.EnumSet.noneOf(Role.class)
+                        : java.util.EnumSet.copyOf(java.util.Set.of(roles)))
+                .build());
+    }
+
+    /** Executa a requisicao como uma conta especifica. */
+    protected ResultActions performAs(AppUser user, MockHttpServletRequestBuilder builder)
+            throws Exception {
+        return mockMvc.perform(builder.header("Authorization", "Bearer " + tokenFor(user)));
+    }
+
+    protected String tokenFor(AppUser user) {
+        return tokenService.issueFor(user).token();
+    }
+
+    /**
+     * Coloca a conta no SecurityContext da thread atual, do mesmo jeito que o
+     * filtro faria: decodificando um token de verdade. Necessario nos testes que
+     * chamam services diretamente, sem passar por HTTP.
      *
-     * O usuario nao precisa existir no banco: o resource server valida a
-     * assinatura e le os papeis da claim, sem consultar o app_user a cada
-     * requisicao. Onde a identidade importar de fato (dono do evento, portaria
-     * vinculada), a Etapa 2 usa usuarios reais.
+     * O contexto e ThreadLocal — nos testes de concorrencia isto precisa ser
+     * chamado dentro de cada thread.
+     */
+    protected void authenticateAs(AppUser user) {
+        var jwt = jwtDecoder.decode(tokenFor(user));
+        var authorities = user.getRoles().stream()
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role.name()))
+                .map(org.springframework.security.core.GrantedAuthority.class::cast)
+                .toList();
+        SecurityContextHolder.getContext()
+                .setAuthentication(new JwtAuthenticationToken(jwt, authorities));
+    }
+
+    /**
+     * Token assinado pelo TokenService real, para uma conta que nao existe no
+     * banco. Serve aos testes de autenticacao: o resource server valida a
+     * assinatura sem consultar o app_user, entao isto exercita exatamente o
+     * filtro. Rotas que exigem identidade recusam este token.
      */
     protected String tokenFor(Role... roles) {
         var user = AppUser.builder()

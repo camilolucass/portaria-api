@@ -1,6 +1,7 @@
 package br.com.portaria.order;
 
 import br.com.portaria.batch.TicketBatch;
+import br.com.portaria.identity.AppUser;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -42,6 +43,14 @@ public class PurchaseOrder {
     @Column(name = "public_id", nullable = false, unique = true, updatable = false)
     @Builder.Default
     private UUID publicId = UUID.randomUUID();
+
+    /**
+     * Conta que fez a compra. Diferente do buyer, que e o dado fiscal e pode
+     * legitimamente ser de outra pessoa. A autorizacao olha para este campo.
+     */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private AppUser user;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "buyer_id", nullable = false)

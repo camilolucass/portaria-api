@@ -4,6 +4,8 @@ import br.com.portaria.AbstractDatabaseTest;
 import br.com.portaria.batch.TicketBatch;
 import br.com.portaria.batch.TicketBatchRepository;
 import br.com.portaria.event.EventRepository;
+import br.com.portaria.identity.AppUser;
+import br.com.portaria.identity.Role;
 import br.com.portaria.shared.exception.SoldOutException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,8 +43,15 @@ class OrderConcurrencyTest extends AbstractDatabaseTest {
 
     @Test
     void naoDeveVenderMaisIngressosDoQueOLoteComporta() throws Exception {
+        AppUser organizer = createUser("organizadora@exemplo.com", Role.ORGANIZER);
         TicketBatch batch = OrderTestFixtures.publishedBatchWithSlots(
-                eventRepository, batchRepository, SLOTS, 4500);
+                eventRepository, batchRepository, organizer, SLOTS, 4500);
+
+        // uma conta por thread: 20 compradores diferentes disputando o mesmo lote
+        var buyers = new java.util.ArrayList<AppUser>();
+        for (int i = 0; i < THREADS; i++) {
+            buyers.add(createUser("comprador" + i + "@exemplo.com", Role.BUYER));
+        }
 
         ExecutorService pool = Executors.newFixedThreadPool(THREADS);
         CountDownLatch start = new CountDownLatch(1);
@@ -52,8 +61,11 @@ class OrderConcurrencyTest extends AbstractDatabaseTest {
 
         for (int i = 0; i < THREADS; i++) {
             final String document = "1234567890" + i;
+            final AppUser buyer = buyers.get(i);
             pool.submit(() -> {
                 try {
+                    // o SecurityContext e ThreadLocal: cada thread autentica a sua conta
+                    authenticateAs(buyer);
                     start.await();
                     orderService.create(OrderTestFixtures.orderFor(batch, 1, document));
                     created.incrementAndGet();

@@ -52,7 +52,7 @@ existir a chance de rodar em producao. Ele e idempotente: reiniciar nao duplica.
 ./mvnw verify
 ```
 
-72 testes, todos contra **Postgres real** via Testcontainers — o SPEC proibe H2
+91 testes, todos contra **Postgres real** via Testcontainers — o SPEC proibe H2
 inclusive em teste, porque H2 nao reproduz o comportamento concorrente que os
 casos criticos exercitam. Precisa do Docker rodando.
 
@@ -92,6 +92,23 @@ Imagem multi-stage, ~132 MB, rodando como usuario nao-root com
 apenas o login, `/actuator/health` e a documentacao. Contas do perfil dev:
 `organizador@exemplo.com`, `portaria@exemplo.com` e `comprador@exemplo.com`,
 senha `portaria-dev-2026` — dado de demonstracao, nunca de producao.
+
+Em producao nao ha auto-cadastro: o primeiro organizador vem de
+`APP_BOOTSTRAP_ORGANIZER_EMAIL` e `APP_BOOTSTRAP_ORGANIZER_PASSWORD`.
+
+### Quem pode o que
+
+| | ORGANIZER | GATE | BUYER |
+|---|---|---|---|
+| Criar e publicar evento, criar lote | so os proprios | nao | nao |
+| Listar eventos | os proprios, em qualquer situacao | — | so os publicados |
+| `/stats` (receita) | so os proprios | **nao** | nao |
+| `POST /checkins` | nao | so eventos vinculados | nao |
+| Comprar, ver pedido e QR | nao | nao | so os proprios |
+
+Falta de papel devolve **403**. Recurso de outra conta devolve **404**, e nao
+403: um 403 confirmaria que aquele identificador existe, permitindo mapear
+eventos, pedidos e ingressos alheios so variando o UUID.
 
 Erros seguem RFC 7807 (`application/problem+json`), com `title` em portugues.
 
@@ -149,6 +166,8 @@ conferi que o teste realmente falha:
 | tirar `AND status = 'ISSUED'` | `CheckinConcurrencyTest` falha: **20 de 20** entram com o mesmo ingresso |
 | tirar `clearAutomatically = true` | 9 das 19 recusas saem sem informar o horario da entrada anterior |
 | devolver estoque sem reivindicar o pedido | 8 instancias do job devolvem o mesmo pedido: estoque cai de 9 para 1 em vez de 5 |
+| tirar `@PreAuthorize` de `/stats` | portaria e comprador passam a ler a receita do evento |
+| tirar a checagem de dono do pedido | um comprador le e cancela o pedido de outro |
 
 A ultima mutacao passou despercebida na primeira tentativa: a linha estava
 escrita, como o SPEC pede, mas nenhum teste dependia dela. O teste de

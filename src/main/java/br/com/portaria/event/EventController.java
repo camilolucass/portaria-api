@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,6 +37,7 @@ public class EventController {
             @ApiResponse(responseCode = "400", description = "Campos invalidos"),
             @ApiResponse(responseCode = "422", description = "Periodo incoerente entre portao, inicio e fim")
     })
+    @PreAuthorize("hasRole('ORGANIZER')")
     @PostMapping
     public ResponseEntity<EventResponse> create(@RequestBody @Valid CreateEventRequest request,
                                                 UriComponentsBuilder uriBuilder) {
@@ -52,6 +54,7 @@ public class EventController {
             @ApiResponse(responseCode = "404", description = "Evento nao encontrado"),
             @ApiResponse(responseCode = "409", description = "O evento nao esta em DRAFT")
     })
+    @PreAuthorize("hasRole('ORGANIZER')")
     @PostMapping("/{publicId}/publish")
     public EventResponse publish(@PathVariable UUID publicId) {
         return service.publish(publicId);

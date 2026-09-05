@@ -176,8 +176,19 @@ class AuthenticationTest extends AbstractDatabaseTest {
 
     @Test
     void comTokenValidoAsRotasDeNegocioRespondem() throws Exception {
-        perform(get("/api/v1/events"), Role.ORGANIZER)
+        performAs(createUser("outra@exemplo.com", Role.ORGANIZER), get("/api/v1/events"))
                 .andExpect(status().isOk());
+    }
+
+    /**
+     * Token bem assinado de uma conta que nao existe mais e recusado. Sem esta
+     * checagem, apagar um usuario nao tiraria o acesso dele ate o token expirar.
+     */
+    @Test
+    void tokenDeContaInexistenteNaoAcessaRotaDeNegocio() throws Exception {
+        mockMvc.perform(get("/api/v1/events")
+                        .header("Authorization", "Bearer " + tokenFor(Role.ORGANIZER)))
+                .andExpect(status().isForbidden());
     }
 
     // rotas publicas ----------------------------------------------------------

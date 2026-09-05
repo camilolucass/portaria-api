@@ -4,8 +4,11 @@ import br.com.portaria.AbstractDatabaseTest;
 import br.com.portaria.batch.TicketBatch;
 import br.com.portaria.batch.TicketBatchRepository;
 import br.com.portaria.event.EventRepository;
+import br.com.portaria.identity.AppUser;
+import br.com.portaria.identity.Role;
 import br.com.portaria.ticket.TicketRepository;
 import br.com.portaria.ticket.TicketStatus;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -41,8 +44,20 @@ class OrderLifecycleTest extends AbstractDatabaseTest {
     @Autowired
     private TicketBatchRepository batchRepository;
 
+    private AppUser organizer;
+    private AppUser buyer;
+
+    @BeforeEach
+    void authenticateAsBuyer() {
+        organizer = createUser("organizadora@exemplo.com", Role.ORGANIZER);
+        buyer = createUser("compradora@exemplo.com", Role.BUYER);
+        // os services leem a conta do SecurityContext; as chamadas diretas precisam dela
+        authenticateAs(buyer);
+    }
+
     private TicketBatch batch(int slots) {
-        return OrderTestFixtures.publishedBatchWithSlots(eventRepository, batchRepository, slots, 4500);
+        return OrderTestFixtures.publishedBatchWithSlots(
+                eventRepository, batchRepository, organizer, slots, 4500);
     }
 
     // RN-04 e RN-05 -----------------------------------------------------------
@@ -52,7 +67,7 @@ class OrderLifecycleTest extends AbstractDatabaseTest {
         TicketBatch batch = batch(10);
         var request = OrderTestFixtures.orderFor(batch, 2, "12345678900");
 
-        perform(post("/api/v1/orders")
+        performAs(buyer, post("/api/v1/orders")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(request)))
                 .andExpect(status().isCreated())
@@ -71,7 +86,7 @@ class OrderLifecycleTest extends AbstractDatabaseTest {
         TicketBatch batch = batch(1);
         var request = OrderTestFixtures.orderFor(batch, 2, "12345678900");
 
-        perform(post("/api/v1/orders")
+        performAs(buyer, post("/api/v1/orders")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(request)))
                 .andExpect(status().isConflict())
@@ -86,14 +101,14 @@ class OrderLifecycleTest extends AbstractDatabaseTest {
     @Test
     void deveRecusarQuantidadeDiferenteDoNumeroDeTitularesCom400() throws Exception {
         TicketBatch batch = batch(10);
-        var buyer = new BuyerRequest("Lucas", "lucas@exemplo.com", "12345678900");
+        var buyerData = new BuyerRequest("Lucas", "lucas@exemplo.com", "12345678900");
         var holders = List.of(
                 new HolderRequest("Titular 1", null),
                 new HolderRequest("Titular 2", null),
                 new HolderRequest("Titular 3", null));
-        var request = new CreateOrderRequest(batch.getPublicId(), 2, buyer, holders);
+        var request = new CreateOrderRequest(batch.getPublicId(), 2, buyerData, holders);
 
-        perform(post("/api/v1/orders")
+        performAs(buyer, post("/api/v1/orders")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(request)))
                 .andExpect(status().isBadRequest())
@@ -111,7 +126,7 @@ class OrderLifecycleTest extends AbstractDatabaseTest {
         TicketBatch batch = batch(10);
         var created = orderService.create(OrderTestFixtures.orderFor(batch, 3, "12345678900"));
 
-        perform(post("/api/v1/orders/{id}/pay", created.id()))
+        performAs(buyer, post("/api/v1/orders/{id}/pay", created.id()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PAID"))
                 .andExpect(jsonPath("$.paidAt").isNotEmpty())
@@ -139,7 +154,7 @@ class OrderLifecycleTest extends AbstractDatabaseTest {
         var created = orderService.create(OrderTestFixtures.orderFor(batch, 1, "12345678900"));
         orderService.pay(created.id());
 
-        perform(post("/api/v1/orders/{id}/pay", created.id()))
+        performAs(buyer, post("/api/v1/orders/{id}/pay", created.id()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.title").value("Situacao do pedido nao permite a operacao"));
 
@@ -149,7 +164,7 @@ class OrderLifecycleTest extends AbstractDatabaseTest {
 
     @Test
     void deveDevolver404ParaPedidoInexistente() throws Exception {
-        perform(get("/api/v1/orders/{id}", UUID.randomUUID()))
+        performAs(buyer, get("/api/v1/orders/{id}", UUID.randomUUID()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title").value("Pedido nao encontrado"));
     }
@@ -160,7 +175,7 @@ class OrderLifecycleTest extends AbstractDatabaseTest {
         var created = orderService.create(OrderTestFixtures.orderFor(batch, 2, "12345678900"));
         orderService.pay(created.id());
 
-        perform(get("/api/v1/orders/{id}", created.id()))
+        performAs(buyer, get("/api/v1/orders/{id}", created.id()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PAID"))
                 .andExpect(jsonPath("$.batchName").value("1o lote"))
@@ -211,7 +226,7 @@ class OrderLifecycleTest extends AbstractDatabaseTest {
         var created = orderService.create(OrderTestFixtures.orderFor(batch, 2, "12345678900"));
         orderService.pay(created.id());
 
-        perform(post("/api/v1/orders/{id}/cancel", created.id()))
+        performAs(buyer, post("/api/v1/orders/{id}/cancel", created.id()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
 

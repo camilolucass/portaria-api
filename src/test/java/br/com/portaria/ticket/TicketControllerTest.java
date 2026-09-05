@@ -6,11 +6,14 @@ import br.com.portaria.batch.TicketBatchRepository;
 import br.com.portaria.event.Event;
 import br.com.portaria.event.EventRepository;
 import br.com.portaria.event.EventStatus;
+import br.com.portaria.identity.AppUser;
+import br.com.portaria.identity.Role;
 import br.com.portaria.order.Buyer;
 import br.com.portaria.order.BuyerRepository;
 import br.com.portaria.order.OrderRepository;
 import br.com.portaria.order.OrderStatus;
 import br.com.portaria.order.PurchaseOrder;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -43,11 +46,20 @@ class TicketControllerTest extends AbstractDatabaseTest {
     @Autowired
     private OrderRepository orderRepository;
 
+    private AppUser organizer;
+    private AppUser buyer;
+
+    @BeforeEach
+    void createAccounts() {
+        organizer = createUser("organizadora@exemplo.com", Role.ORGANIZER);
+        buyer = createUser("compradora@exemplo.com", Role.BUYER);
+    }
+
     @Test
     void deveDevolverOIngressoComOCodigoAssinado() throws Exception {
         Ticket ticket = issuedTicket();
 
-        perform(get("/api/v1/tickets/{id}", ticket.getPublicId()))
+        performAs(buyer, get("/api/v1/tickets/{id}", ticket.getPublicId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(ticket.getPublicId().toString()))
                 .andExpect(jsonPath("$.holderName").value("Ana Souza"))
@@ -60,14 +72,14 @@ class TicketControllerTest extends AbstractDatabaseTest {
     void deveDevolverOQrComoPng() throws Exception {
         Ticket ticket = issuedTicket();
 
-        perform(get("/api/v1/tickets/{id}/qr", ticket.getPublicId()))
+        performAs(buyer, get("/api/v1/tickets/{id}/qr", ticket.getPublicId()))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.IMAGE_PNG));
     }
 
     @Test
     void deveDevolver404ParaIngressoInexistente() throws Exception {
-        perform(get("/api/v1/tickets/{id}", UUID.randomUUID()))
+        performAs(buyer, get("/api/v1/tickets/{id}", UUID.randomUUID()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title").value("Ingresso nao encontrado"));
     }
@@ -76,6 +88,7 @@ class TicketControllerTest extends AbstractDatabaseTest {
         LocalDateTime now = LocalDateTime.now();
 
         Event event = eventRepository.save(Event.builder()
+                .organizer(organizer)
                 .name("Festa Universitaria 2026")
                 .venue("Centro de Eventos, Orleans/SC")
                 .gateOpensAt(now.plusDays(1))
@@ -94,14 +107,15 @@ class TicketControllerTest extends AbstractDatabaseTest {
                 .salesEnd(now.plusHours(1))
                 .build());
 
-        Buyer buyer = buyerRepository.save(Buyer.builder()
+        Buyer buyerData = buyerRepository.save(Buyer.builder()
                 .name("Lucas Camilo")
                 .email("lucas@exemplo.com")
                 .document("12345678900")
                 .build());
 
         PurchaseOrder order = orderRepository.save(PurchaseOrder.builder()
-                .buyer(buyer)
+                .user(buyer)
+                .buyer(buyerData)
                 .batch(batch)
                 .quantity(1)
                 .totalCents(4500)

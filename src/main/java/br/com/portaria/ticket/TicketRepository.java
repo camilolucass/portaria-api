@@ -1,5 +1,6 @@
 package br.com.portaria.ticket;
 
+import br.com.portaria.identity.AppUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -15,6 +16,9 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     Optional<Ticket> findByPublicId(UUID publicId);
 
     List<Ticket> findByOrderIdOrderByIdAsc(Long orderId);
+
+    /** Ingresso de um pedido de uma conta especifica. Base da checagem de dono. */
+    Optional<Ticket> findByPublicIdAndOrderUserId(UUID publicId, Long userId);
 
     /**
      * SPEC 7.3 — check-in atomico (problema P3).
@@ -35,7 +39,7 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
         """)
     int checkIn(@Param("id") Long id,
                 @Param("now") LocalDateTime now,
-                @Param("operator") String operator,
+                @Param("operator") AppUser operator,
                 @Param("used") TicketStatus used,
                 @Param("issued") TicketStatus issued);
 }

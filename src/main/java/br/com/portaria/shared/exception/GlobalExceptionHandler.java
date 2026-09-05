@@ -53,6 +53,22 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.badRequest().body(problem);
     }
 
+    /**
+     * Negacao decidida dentro da aplicacao — @PreAuthorize, ou um token bem
+     * assinado cuja conta nao existe mais. Chega aqui, e nao no
+     * AccessDeniedHandler do filtro, porque e lancada depois que a requisicao
+     * ja entrou no DispatcherServlet. Sem este handler viraria 500.
+     */
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ProblemDetail handleAccessDenied(
+            org.springframework.security.access.AccessDeniedException ex) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.FORBIDDEN, "Sua conta nao tem permissao para esta operacao.");
+        problem.setTitle("Acesso negado");
+        problem.setProperty("timestamp", LocalDateTime.now());
+        return problem;
+    }
+
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleUnexpected(Exception ex) {
         log.error("Falha nao tratada", ex);

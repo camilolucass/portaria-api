@@ -1,6 +1,7 @@
 package br.com.portaria.ticket;
 
 import br.com.portaria.batch.TicketBatch;
+import br.com.portaria.identity.AppUser;
 import br.com.portaria.order.PurchaseOrder;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -61,8 +62,13 @@ public class Ticket {
     @Column(name = "checked_in_at")
     private LocalDateTime checkedInAt;
 
-    @Column(name = "checked_in_by", length = 120)
-    private String checkedInBy;
+    /**
+     * Quem liberou a entrada. Era texto livre vindo do cliente — auditoria que o
+     * proprio auditado escrevia. Agora e o usuario autenticado.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "checked_in_by_user_id")
+    private AppUser checkedInBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default

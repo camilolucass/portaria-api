@@ -4,6 +4,8 @@ import br.com.portaria.batch.TicketBatch;
 import br.com.portaria.batch.TicketBatchRepository;
 import br.com.portaria.event.Event;
 import br.com.portaria.event.EventRepository;
+import br.com.portaria.event.EventStaff;
+import br.com.portaria.event.EventStaffRepository;
 import br.com.portaria.event.EventStatus;
 import br.com.portaria.identity.AppUser;
 import br.com.portaria.identity.AppUserRepository;
@@ -51,18 +53,25 @@ public class DemoDataSeeder implements ApplicationRunner {
      */
     private static final String DEMO_PASSWORD = "portaria-dev-2026";
 
+    private static final String ORGANIZER_EMAIL = "organizador@exemplo.com";
+    private static final String GATE_EMAIL = "portaria@exemplo.com";
+    private static final String BUYER_EMAIL = "comprador@exemplo.com";
+
     private final EventRepository eventRepository;
     private final TicketBatchRepository batchRepository;
     private final AppUserRepository userRepository;
+    private final EventStaffRepository eventStaffRepository;
     private final PasswordEncoder passwordEncoder;
 
     public DemoDataSeeder(EventRepository eventRepository,
                           TicketBatchRepository batchRepository,
                           AppUserRepository userRepository,
+                          EventStaffRepository eventStaffRepository,
                           PasswordEncoder passwordEncoder) {
         this.eventRepository = eventRepository;
         this.batchRepository = batchRepository;
         this.userRepository = userRepository;
+        this.eventStaffRepository = eventStaffRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -76,9 +85,12 @@ public class DemoDataSeeder implements ApplicationRunner {
             return;
         }
 
+        AppUser organizer = userRepository.findByEmail(ORGANIZER_EMAIL).orElseThrow();
+
         LocalDateTime now = LocalDateTime.now();
         Event event = eventRepository.save(Event.builder()
                 .publicId(DEMO_EVENT_ID)
+                .organizer(organizer)
                 .name("Festa Universitaria 2026")
                 .description("Open bar ate as 2h. Dado de demonstracao, perfil dev.")
                 .venue("Centro de Eventos, Orleans/SC")
@@ -110,14 +122,18 @@ public class DemoDataSeeder implements ApplicationRunner {
                 .salesEnd(now.plusDays(29))
                 .build());
 
-        log.info("Perfil dev: evento de demonstracao criado com 2 lotes");
+        // sem este vinculo a portaria de demonstracao nao consegue validar nada
+        AppUser gate = userRepository.findByEmail(GATE_EMAIL).orElseThrow();
+        eventStaffRepository.save(new EventStaff(event, gate));
+
+        log.info("Perfil dev: evento de demonstracao criado com 2 lotes e portaria vinculada");
     }
 
     /** Uma conta por papel. Nao ha auto-cadastro: e assim que usuarios nascem. */
     private void seedUsers() {
-        createIfAbsent("organizador@exemplo.com", "Organizadora Demo", Set.of(Role.ORGANIZER));
-        createIfAbsent("portaria@exemplo.com", "Portaria Demo", Set.of(Role.GATE));
-        createIfAbsent("comprador@exemplo.com", "Comprador Demo", Set.of(Role.BUYER));
+        createIfAbsent(ORGANIZER_EMAIL, "Organizadora Demo", Set.of(Role.ORGANIZER));
+        createIfAbsent(GATE_EMAIL, "Portaria Demo", Set.of(Role.GATE));
+        createIfAbsent(BUYER_EMAIL, "Comprador Demo", Set.of(Role.BUYER));
     }
 
     private void createIfAbsent(String email, String name, Set<Role> roles) {

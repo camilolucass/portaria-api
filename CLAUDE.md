@@ -16,8 +16,9 @@ Se a tarefa pedida pertence a outra etapa, pare e diga a qual etapa ela pertence
 | 4 | `QrCodeSigner` (7.2), ZXing, `CheckinService` (7.3). TC-02 a TC-06. | `feat: qr assinado e check-in atomico` |
 | 5 | Swagger, seed `V2`, Actuator, README, GitHub Actions, Dockerfile. | — |
 
-**Status atual: Fase 1 completa. Fase 2 em andamento — Etapa 1 (identidade e
-autenticacao) concluida; falta a Etapa 2 (autorizacao).** Proximo trabalho seria a Fase 2 (Spring Security + JWT), que NAO deve ser iniciada sem pedido explicito.
+**Status atual: Fase 1 e Fase 2 completas.** Proximo trabalho seria a Fase 3
+(Mercado Pago, webhook idempotente e front de portaria), que NAO deve ser
+iniciada sem pedido explicito. Proximo trabalho seria a Fase 2 (Spring Security + JWT), que NAO deve ser iniciada sem pedido explicito.
 
 ## Fora do escopo da Fase 1 (secao 10 do SPEC)
 
@@ -77,9 +78,16 @@ O SPEC dedica um paragrafo a Fase 2. O que ficou decidido:
 | Token | JWT HS256, `JWT_SECRET` no ambiente, 60 min, claim `roles` sem prefixo |
 | Senha | `DelegatingPasswordEncoder` (BCrypt com prefixo `{bcrypt}`) |
 
-**Pendencia da Etapa 2:** sem auto-cadastro e com o seeder restrito ao perfil
-dev, um deploy real sobe sem nenhum usuario e ninguem consegue logar. Resolver
-com bootstrap por variavel de ambiente, **nao** com rota de cadastro.
+**Como nascem as contas em producao:** `OrganizerBootstrap` cria o primeiro
+ORGANIZER a partir de `app.bootstrap.organizer.email` e `.password` (variaveis de
+ambiente). So age se as duas estiverem definidas, exige senha de 12+ caracteres e
+nunca sobrescreve conta existente. Nao ha, e nao deve haver, rota publica de
+cadastro que aceite papel.
+
+**Convencao de status na autorizacao:** falta de papel devolve **403**; recurso
+que existe mas pertence a outra conta devolve **404**. Um 403 no segundo caso
+confirmaria a existencia do identificador e permitiria mapear eventos, pedidos e
+ingressos alheios variando o UUID.
 
 Spring Security e **7.1.1**, nao o 6 do SPEC: e o que o Boot 4 traz.
 
@@ -115,6 +123,12 @@ Spring Security e **7.1.1**, nao o 6 do SPEC: e o que o Boot 4 traz.
 - **`mvn` nao remove recurso deletado de `target/classes`.** Apagar uma migration
   e rodar `verify` sem `clean` continua embutindo o arquivo antigo no jar. Ao
   mexer em migrations, rode `./mvnw clean verify`.
+- **`AccessDeniedException` lancada dentro do service nao chega ao
+  `AccessDeniedHandler`.** Ela nasce depois do DispatcherServlet, entao vira 500
+  se o `GlobalExceptionHandler` nao a tratar. Foi assim que token de conta
+  apagada respondia 500 em vez de 403.
+- **`@IdClass` nao aceita `record`.** O JPA le a chave no padrao JavaBean, e
+  `event()`/`user()` nao atendem. `EventStaff.EventStaffId` e classe comum.
 - **`NimbusJwtEncoder` assume RS256.** Com chave HMAC e preciso declarar
   `JwsHeader.with(MacAlgorithm.HS256)` nos parametros, senao todo token falha com
   "Failed to select a JWK signing key".

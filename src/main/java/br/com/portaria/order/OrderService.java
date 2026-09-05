@@ -3,6 +3,8 @@ package br.com.portaria.order;
 import br.com.portaria.batch.TicketBatch;
 import br.com.portaria.batch.TicketBatchRepository;
 import br.com.portaria.batch.TicketBatchService;
+import br.com.portaria.identity.AppUser;
+import br.com.portaria.identity.CurrentUserService;
 import br.com.portaria.shared.exception.InvalidOrderStatusException;
 import br.com.portaria.shared.exception.OrderNotFoundException;
 import br.com.portaria.shared.exception.SoldOutException;
@@ -25,6 +27,7 @@ public class OrderService {
     private final TicketRepository ticketRepository;
     private final TicketBatchRepository batchRepository;
     private final TicketBatchService batchService;
+    private final CurrentUserService currentUser;
     private final int expirationMinutes;
 
     public OrderService(OrderRepository orderRepository,
@@ -32,12 +35,14 @@ public class OrderService {
                         TicketRepository ticketRepository,
                         TicketBatchRepository batchRepository,
                         TicketBatchService batchService,
+                        CurrentUserService currentUser,
                         @Value("${app.order.expiration-minutes}") int expirationMinutes) {
         this.orderRepository = orderRepository;
         this.buyerRepository = buyerRepository;
         this.ticketRepository = ticketRepository;
         this.batchRepository = batchRepository;
         this.batchService = batchService;
+        this.currentUser = currentUser;
         this.expirationMinutes = expirationMinutes;
     }
 
@@ -48,6 +53,7 @@ public class OrderService {
      */
     @Transactional
     public OrderResponse create(CreateOrderRequest request) {
+        AppUser account = currentUser.require();
         TicketBatch batch = batchService.findEntity(request.batchId());
         batchService.assertOnSale(batch, LocalDateTime.now());          // RN-01, RN-02
 
@@ -60,6 +66,7 @@ public class OrderService {
         Buyer buyer = findOrCreateBuyer(request.buyer());
 
         PurchaseOrder order = PurchaseOrder.builder()
+                .user(account)
                 .buyer(buyer)
                 .batch(batch)
                 .quantity(request.quantity())
@@ -146,9 +153,16 @@ public class OrderService {
         return OrderResponse.of(order, ticketRepository.findByOrderIdOrderByIdAsc(order.getId()));
     }
 
+    /**
+     * Pedido da conta autenticada.
+     *
+     * Pedido de outra conta devolve 404, e nao 403: um 403 confirmaria que
+     * aquele identificador existe. Antes da Fase 2, quem descobrisse o publicId
+     * de um pedido lia os ingressos e o codigo do QR de outra pessoa.
+     */
     @Transactional(readOnly = true)
     public PurchaseOrder findEntity(UUID publicId) {
-        return orderRepository.findByPublicId(publicId)
+        return orderRepository.findByPublicIdAndUserId(publicId, currentUser.require().getId())
                 .orElseThrow(() -> new OrderNotFoundException(publicId));
     }
 

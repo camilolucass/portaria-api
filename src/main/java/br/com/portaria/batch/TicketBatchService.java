@@ -27,7 +27,7 @@ public class TicketBatchService {
 
     @Transactional
     public BatchResponse create(UUID eventPublicId, CreateBatchRequest request) {
-        Event event = eventService.findEntity(eventPublicId);
+        Event event = eventService.findOwned(eventPublicId);
         validateSalesPeriod(request, event);
 
         TicketBatch batch = TicketBatch.builder()
@@ -45,7 +45,8 @@ public class TicketBatchService {
 
     @Transactional(readOnly = true)
     public List<BatchResponse> listByEvent(UUID eventPublicId) {
-        Event event = eventService.findEntity(eventPublicId);
+        // quem compra precisa ver os lotes; findVisible cobre publicado ou proprio
+        Event event = eventService.findVisible(eventPublicId);
         return repository.findByEventIdOrderBySalesStartAsc(event.getId())
                 .stream()
                 .map(BatchResponse::from)

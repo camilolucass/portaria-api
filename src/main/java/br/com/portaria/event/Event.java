@@ -1,12 +1,16 @@
 package br.com.portaria.event;
 
+import br.com.portaria.identity.AppUser;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,6 +37,11 @@ public class Event {
     @Column(name = "public_id", nullable = false, unique = true, updatable = false)
     @Builder.Default
     private UUID publicId = UUID.randomUUID();
+
+    /** Dono do evento. Organizador so enxerga e altera os proprios eventos. */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "organizer_id", nullable = false)
+    private AppUser organizer;
 
     @Column(name = "name", nullable = false, length = 120)
     private String name;

@@ -1,6 +1,9 @@
 package br.com.portaria.event;
 
 import br.com.portaria.AbstractIntegrationTest;
+import br.com.portaria.identity.AppUser;
+import br.com.portaria.identity.Role;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +24,13 @@ class EventControllerTest extends AbstractIntegrationTest {
     private static final LocalDateTime START = LocalDateTime.of(2026, 10, 10, 22, 0);
     private static final LocalDateTime END   = LocalDateTime.of(2026, 10, 11, 4, 0);
 
+    private AppUser organizer;
+
+    @BeforeEach
+    void createOrganizer() {
+        organizer = createUser("organizadora@exemplo.com", Role.ORGANIZER);
+    }
+
     private CreateEventRequest validRequest() {
         return new CreateEventRequest("Festa Universitaria 2026", "Open bar",
                 "Centro de Eventos, Orleans/SC", GATE, START, END);
@@ -28,7 +38,7 @@ class EventControllerTest extends AbstractIntegrationTest {
 
     @Test
     void deveCriarEventoEmDraftEDevolver201() throws Exception {
-        perform(post("/api/v1/events")
+        performAs(organizer, post("/api/v1/events")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(validRequest())))
                 .andExpect(status().isCreated())
@@ -42,7 +52,7 @@ class EventControllerTest extends AbstractIntegrationTest {
     void deveRecusarEventoSemNomeCom400() throws Exception {
         var invalid = new CreateEventRequest("  ", null, "Centro de Eventos", GATE, START, END);
 
-        perform(post("/api/v1/events")
+        performAs(organizer, post("/api/v1/events")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(invalid)))
                 .andExpect(status().isBadRequest())
@@ -54,7 +64,7 @@ class EventControllerTest extends AbstractIntegrationTest {
     void deveRecusarEventoQueTerminaAntesDeComecarCom422() throws Exception {
         var invalid = new CreateEventRequest("Festa", null, "Centro", GATE, START, START.minusHours(1));
 
-        perform(post("/api/v1/events")
+        performAs(organizer, post("/api/v1/events")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(invalid)))
                 .andExpect(status().isUnprocessableEntity())
@@ -65,7 +75,7 @@ class EventControllerTest extends AbstractIntegrationTest {
     void deveRecusarPortaoAbrindoDepoisDoInicioCom422() throws Exception {
         var invalid = new CreateEventRequest("Festa", null, "Centro", START.plusMinutes(1), START, END);
 
-        perform(post("/api/v1/events")
+        performAs(organizer, post("/api/v1/events")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(invalid)))
                 .andExpect(status().isUnprocessableEntity())
@@ -76,7 +86,7 @@ class EventControllerTest extends AbstractIntegrationTest {
     void devePublicarEventoEmDraft() throws Exception {
         String id = createEvent();
 
-        perform(post("/api/v1/events/{id}/publish", id))
+        performAs(organizer, post("/api/v1/events/{id}/publish", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PUBLISHED"));
     }
@@ -84,16 +94,16 @@ class EventControllerTest extends AbstractIntegrationTest {
     @Test
     void deveRecusarPublicacaoRepetidaCom409() throws Exception {
         String id = createEvent();
-        perform(post("/api/v1/events/{id}/publish", id)).andExpect(status().isOk());
+        performAs(organizer, post("/api/v1/events/{id}/publish", id)).andExpect(status().isOk());
 
-        perform(post("/api/v1/events/{id}/publish", id))
+        performAs(organizer, post("/api/v1/events/{id}/publish", id))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.title").value("Situacao do evento nao permite a operacao"));
     }
 
     @Test
     void deveDevolver404ParaEventoInexistente() throws Exception {
-        perform(get("/api/v1/events/{id}", UUID.randomUUID()))
+        performAs(organizer, get("/api/v1/events/{id}", UUID.randomUUID()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title").value("Evento nao encontrado"));
     }
@@ -102,7 +112,7 @@ class EventControllerTest extends AbstractIntegrationTest {
     void deveBuscarEventoPeloPublicId() throws Exception {
         String id = createEvent();
 
-        perform(get("/api/v1/events/{id}", id))
+        performAs(organizer, get("/api/v1/events/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id))
                 .andExpect(jsonPath("$.venue").value("Centro de Eventos, Orleans/SC"));
@@ -112,14 +122,14 @@ class EventControllerTest extends AbstractIntegrationTest {
     void deveListarEventosPaginado() throws Exception {
         createEvent();
 
-        perform(get("/api/v1/events").param("size", "5"))
+        performAs(organizer, get("/api/v1/events").param("size", "5"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.page.size").value(5));
     }
 
     private String createEvent() throws Exception {
-        String body = perform(post("/api/v1/events")
+        String body = performAs(organizer, post("/api/v1/events")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(validRequest())))
                 .andExpect(status().isCreated())

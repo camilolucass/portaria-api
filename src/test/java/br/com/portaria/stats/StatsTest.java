@@ -6,7 +6,11 @@ import br.com.portaria.batch.TicketBatchRepository;
 import br.com.portaria.checkin.CheckinRequest;
 import br.com.portaria.event.Event;
 import br.com.portaria.event.EventRepository;
+import br.com.portaria.event.EventStaff;
+import br.com.portaria.event.EventStaffRepository;
 import br.com.portaria.event.EventStatus;
+import br.com.portaria.identity.AppUser;
+import br.com.portaria.identity.Role;
 import br.com.portaria.order.BuyerRequest;
 import br.com.portaria.order.CreateOrderRequest;
 import br.com.portaria.order.HolderRequest;
@@ -14,6 +18,7 @@ import br.com.portaria.order.OrderResponse;
 import br.com.portaria.order.OrderService;
 import br.com.portaria.ticket.QrCodeSigner;
 import br.com.portaria.ticket.TicketRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -51,10 +56,25 @@ class StatsTest extends AbstractDatabaseTest {
     @Autowired
     private TicketRepository ticketRepository;
 
+    @Autowired
+    private EventStaffRepository eventStaffRepository;
+
+    private AppUser organizer;
+    private AppUser buyer;
+    private AppUser gate;
+
+    @BeforeEach
+    void createAccounts() {
+        organizer = createUser("organizadora@exemplo.com", Role.ORGANIZER);
+        buyer = createUser("compradora@exemplo.com", Role.BUYER);
+        gate = createUser("portaria@exemplo.com", Role.GATE);
+    }
+
     /** Evento com portoes abertos agora, para os ingressos poderem entrar. */
     private Event openEvent() {
         LocalDateTime now = LocalDateTime.now();
-        return eventRepository.save(Event.builder()
+        Event event = eventRepository.save(Event.builder()
+                .organizer(organizer)
                 .name("Festa Universitaria 2026")
                 .venue("Centro de Eventos, Orleans/SC")
                 .gateOpensAt(now.minusHours(2))
@@ -62,6 +82,8 @@ class StatsTest extends AbstractDatabaseTest {
                 .endsAt(now.plusHours(6))
                 .status(EventStatus.PUBLISHED)
                 .build());
+        eventStaffRepository.save(new EventStaff(event, gate));
+        return event;
     }
 
     private TicketBatch batch(Event event, String name, int priceCents, int total) {
@@ -78,6 +100,7 @@ class StatsTest extends AbstractDatabaseTest {
     }
 
     private OrderResponse buy(TicketBatch batch, int quantity, String document) {
+        authenticateAs(buyer);
         var holders = new java.util.ArrayList<HolderRequest>();
         for (int i = 0; i < quantity; i++) {
             holders.add(new HolderRequest("Titular " + i, null));
@@ -88,10 +111,20 @@ class StatsTest extends AbstractDatabaseTest {
                 holders));
     }
 
+    private OrderResponse cancelAs(UUID orderId) {
+        authenticateAs(buyer);
+        return orderService.cancel(orderId);
+    }
+
+    private OrderResponse payAs(UUID orderId) {
+        authenticateAs(buyer);
+        return orderService.pay(orderId);
+    }
+
     private void checkIn(UUID ticketPublicId) throws Exception {
-        perform(post("/api/v1/checkins")
+        performAs(gate, post("/api/v1/checkins")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(new CheckinRequest(signer.sign(ticketPublicId), "portaria-1"))))
+                        .content(json(new CheckinRequest(signer.sign(ticketPublicId)))))
                 .andExpect(status().isOk());
     }
 
@@ -102,8 +135,8 @@ class StatsTest extends AbstractDatabaseTest {
         TicketBatch second = batch(event, "2o lote", 6000, 300);
 
         // 3 pagos no 1o lote (R$ 135,00) e 2 pagos no 2o (R$ 120,00)
-        var paidFirst = orderService.pay(buy(first, 3, "11111111111").id());
-        var paidSecond = orderService.pay(buy(second, 2, "22222222222").id());
+        var paidFirst = payAs(buy(first, 3, "11111111111").id());
+        var paidSecond = payAs(buy(second, 2, "22222222222").id());
 
         // 1 pedido apenas reservado: entra em sold, mas nao em emitidos nem receita
         buy(first, 1, "33333333333");
@@ -112,7 +145,7 @@ class StatsTest extends AbstractDatabaseTest {
         checkIn(paidFirst.tickets().get(0).id());
         checkIn(paidSecond.tickets().get(0).id());
 
-        perform(get("/api/v1/events/{id}/stats", event.getPublicId()))
+        performAs(organizer, get("/api/v1/events/{id}/stats", event.getPublicId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalIssued").value(5))
                 .andExpect(jsonPath("$.totalCheckedIn").value(2))
@@ -132,11 +165,11 @@ class StatsTest extends AbstractDatabaseTest {
         Event event = openEvent();
         TicketBatch batch = batch(event, "1o lote", 4500, 200);
 
-        orderService.pay(buy(batch, 2, "11111111111").id());
-        var cancelled = orderService.pay(buy(batch, 2, "22222222222").id());
-        orderService.cancel(cancelled.id());
+        payAs(buy(batch, 2, "11111111111").id());
+        var cancelled = payAs(buy(batch, 2, "22222222222").id());
+        cancelAs(cancelled.id());
 
-        perform(get("/api/v1/events/{id}/stats", event.getPublicId()))
+        performAs(organizer, get("/api/v1/events/{id}/stats", event.getPublicId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalIssued").value(2))
                 .andExpect(jsonPath("$.totalCheckedIn").value(0))
@@ -149,7 +182,7 @@ class StatsTest extends AbstractDatabaseTest {
         Event event = openEvent();
         batch(event, "1o lote", 4500, 200);
 
-        perform(get("/api/v1/events/{id}/stats", event.getPublicId()))
+        performAs(organizer, get("/api/v1/events/{id}/stats", event.getPublicId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalIssued").value(0))
                 .andExpect(jsonPath("$.totalCheckedIn").value(0))
@@ -162,7 +195,7 @@ class StatsTest extends AbstractDatabaseTest {
     void deveDevolverEstatisticasZeradasParaEventoSemLotes() throws Exception {
         Event event = openEvent();
 
-        perform(get("/api/v1/events/{id}/stats", event.getPublicId()))
+        performAs(organizer, get("/api/v1/events/{id}/stats", event.getPublicId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalRevenueCents").value(0))
                 .andExpect(jsonPath("$.byBatch").isEmpty());
@@ -173,13 +206,13 @@ class StatsTest extends AbstractDatabaseTest {
     void naoDeveMisturarDadosDeOutroEvento() throws Exception {
         Event event = openEvent();
         TicketBatch mine = batch(event, "1o lote", 4500, 200);
-        orderService.pay(buy(mine, 2, "11111111111").id());
+        payAs(buy(mine, 2, "11111111111").id());
 
         Event other = openEvent();
         TicketBatch theirs = batch(other, "lote do outro evento", 9900, 50);
-        orderService.pay(buy(theirs, 3, "22222222222").id());
+        payAs(buy(theirs, 3, "22222222222").id());
 
-        perform(get("/api/v1/events/{id}/stats", event.getPublicId()))
+        performAs(organizer, get("/api/v1/events/{id}/stats", event.getPublicId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalIssued").value(2))
                 .andExpect(jsonPath("$.totalRevenueCents").value(2 * 4500))
@@ -188,7 +221,7 @@ class StatsTest extends AbstractDatabaseTest {
 
     @Test
     void deveDevolver404ParaEventoInexistente() throws Exception {
-        perform(get("/api/v1/events/{id}/stats", UUID.randomUUID()))
+        performAs(organizer, get("/api/v1/events/{id}/stats", UUID.randomUUID()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title").value("Evento nao encontrado"));
     }
@@ -196,7 +229,7 @@ class StatsTest extends AbstractDatabaseTest {
     /** Identificador malformado nao pode virar 500 nem vazar stack trace. */
     @Test
     void deveDevolver400ParaIdentificadorMalformado() throws Exception {
-        perform(get("/api/v1/events/{id}/stats", "nao-e-um-uuid"))
+        performAs(organizer, get("/api/v1/events/{id}/stats", "nao-e-um-uuid"))
                 .andExpect(status().isBadRequest());
     }
 
@@ -210,13 +243,13 @@ class StatsTest extends AbstractDatabaseTest {
         Event target = openEvent();
         batch(target, "1o lote", 4500, 200);
 
-        perform(get("/api/v1/events/{id}/stats", "1' OR '1'='1"))
+        performAs(organizer, get("/api/v1/events/{id}/stats", "1' OR '1'='1"))
                 .andExpect(status().isBadRequest());
-        perform(get("/api/v1/events/{id}/stats", "'; DROP TABLE ticket; --"))
+        performAs(organizer, get("/api/v1/events/{id}/stats", "'; DROP TABLE ticket; --"))
                 .andExpect(status().isBadRequest());
 
         // o evento e o schema seguem intactos
-        perform(get("/api/v1/events/{id}/stats", target.getPublicId()))
+        performAs(organizer, get("/api/v1/events/{id}/stats", target.getPublicId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.byBatch.length()").value(1));
         assertThat(ticketRepository.count()).isZero();

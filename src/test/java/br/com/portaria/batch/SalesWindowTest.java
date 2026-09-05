@@ -4,6 +4,7 @@ import br.com.portaria.AbstractIntegrationTest;
 import br.com.portaria.event.Event;
 import br.com.portaria.event.EventRepository;
 import br.com.portaria.event.EventStatus;
+import br.com.portaria.identity.Role;
 import br.com.portaria.shared.exception.EventNotPublishedException;
 import br.com.portaria.shared.exception.SalesWindowClosedException;
 import org.junit.jupiter.api.Test;
@@ -89,6 +90,7 @@ class SalesWindowTest extends AbstractIntegrationTest {
 
     private TicketBatch batchFor(EventStatus status) {
         Event event = eventRepository.save(Event.builder()
+                .organizer(createUser("organizadora@exemplo.com", Role.ORGANIZER))
                 .name("Festa Universitaria 2026")
                 .venue("Centro de Eventos, Orleans/SC")
                 .gateOpensAt(GATE)

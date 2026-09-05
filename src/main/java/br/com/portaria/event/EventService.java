@@ -1,5 +1,8 @@
 package br.com.portaria.event;
 
+import br.com.portaria.identity.AppUser;
+import br.com.portaria.identity.CurrentUserService;
+import br.com.portaria.identity.Role;
 import br.com.portaria.shared.exception.EventNotFoundException;
 import br.com.portaria.shared.exception.InvalidEventStatusException;
 import br.com.portaria.shared.exception.InvalidPeriodException;
@@ -14,9 +17,11 @@ import java.util.UUID;
 public class EventService {
 
     private final EventRepository repository;
+    private final CurrentUserService currentUser;
 
-    public EventService(EventRepository repository) {
+    public EventService(EventRepository repository, CurrentUserService currentUser) {
         this.repository = repository;
+        this.currentUser = currentUser;
     }
 
     @Transactional
@@ -24,6 +29,7 @@ public class EventService {
         validatePeriod(request);
 
         Event event = Event.builder()
+                .organizer(currentUser.require())
                 .name(request.name())
                 .description(request.description())
                 .venue(request.venue())
@@ -38,7 +44,7 @@ public class EventService {
 
     @Transactional
     public EventResponse publish(UUID publicId) {
-        Event event = findEntity(publicId);
+        Event event = findOwned(publicId);
 
         if (event.getStatus() != EventStatus.DRAFT) {
             throw new InvalidEventStatusException(
@@ -49,27 +55,68 @@ public class EventService {
         return EventResponse.from(event);
     }
 
+    /**
+     * Organizador ve os proprios eventos; qualquer outra conta ve os publicados.
+     * A listagem nunca mistura os dois escopos.
+     */
     @Transactional(readOnly = true)
     public Page<EventResponse> list(Pageable pageable) {
-        return repository.findAll(pageable).map(EventResponse::from);
+        AppUser user = currentUser.require();
+
+        Page<Event> events = user.hasRole(Role.ORGANIZER)
+                ? repository.findByOrganizerId(user.getId(), pageable)
+                : repository.findByStatus(EventStatus.PUBLISHED, pageable);
+
+        return events.map(EventResponse::from);
     }
 
     @Transactional(readOnly = true)
     public EventResponse findByPublicId(UUID publicId) {
-        return EventResponse.from(findEntity(publicId));
+        return EventResponse.from(findVisible(publicId));
     }
 
     /**
-     * Devolve a entidade. Uso interno entre services (o lote precisa do evento);
-     * a entidade nunca sai daqui para a camada web.
+     * Evento que a conta atual pode enxergar: o proprio, se organizador, ou
+     * qualquer um publicado.
      */
+    @Transactional(readOnly = true)
+    public Event findVisible(UUID publicId) {
+        AppUser user = currentUser.require();
+        Event event = findEntity(publicId);
+
+        boolean owner = user.getId().equals(event.getOrganizer().getId());
+        if (owner || event.getStatus() == EventStatus.PUBLISHED) {
+            return event;
+        }
+        // rascunho de outro organizador: nao existe, do ponto de vista desta conta
+        throw new EventNotFoundException(publicId);
+    }
+
+    /**
+     * Evento do organizador autenticado.
+     *
+     * Evento de outro organizador devolve 404, e nao 403: um 403 confirmaria
+     * que aquele identificador existe, o que permitiria mapear os eventos da
+     * concorrencia so variando o UUID.
+     */
+    @Transactional(readOnly = true)
+    public Event findOwned(UUID publicId) {
+        AppUser user = currentUser.require();
+        Event event = findEntity(publicId);
+
+        if (!user.getId().equals(event.getOrganizer().getId())) {
+            throw new EventNotFoundException(publicId);
+        }
+        return event;
+    }
+
+    /** Sem checagem de dono. Uso interno de fluxos que ja validaram o acesso. */
     @Transactional(readOnly = true)
     public Event findEntity(UUID publicId) {
         return repository.findByPublicId(publicId)
                 .orElseThrow(() -> new EventNotFoundException(publicId));
     }
 
-    /** Mesmas condicoes de event_period_ck e event_gate_ck, checadas antes do banco. */
     private void validatePeriod(CreateEventRequest request) {
         if (!request.endsAt().isAfter(request.startsAt())) {
             throw new InvalidPeriodException("O fim do evento deve ser posterior ao inicio.");

@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,6 +36,7 @@ public class TicketBatchController {
             @ApiResponse(responseCode = "404", description = "Evento nao encontrado"),
             @ApiResponse(responseCode = "422", description = "Periodo de vendas incoerente")
     })
+    @PreAuthorize("hasRole('ORGANIZER')")
     @PostMapping
     public ResponseEntity<BatchResponse> create(@PathVariable UUID eventPublicId,
                                                 @RequestBody @Valid CreateBatchRequest request) {

@@ -28,7 +28,8 @@ public class StatsService {
      */
     @Transactional(readOnly = true)
     public EventStatsResponse of(UUID eventPublicId) {
-        Event event = eventService.findEntity(eventPublicId);
+        // dado financeiro: so o dono do evento. GATE nunca chega aqui (PreAuthorize)
+        Event event = eventService.findOwned(eventPublicId);
 
         List<BatchStatsProjection> byBatch = repository.statsByBatch(
                 event.getId(), TicketStatus.USED, TicketStatus.CANCELLED);

@@ -5,6 +5,7 @@ import br.com.portaria.batch.TicketBatchRepository;
 import br.com.portaria.event.Event;
 import br.com.portaria.event.EventRepository;
 import br.com.portaria.event.EventStatus;
+import br.com.portaria.identity.AppUser;
 
 import java.time.LocalDateTime;
 
@@ -16,11 +17,13 @@ final class OrderTestFixtures {
 
     static TicketBatch publishedBatchWithSlots(EventRepository eventRepository,
                                                TicketBatchRepository batchRepository,
+                                               AppUser organizer,
                                                int totalQuantity,
                                                int priceCents) {
         LocalDateTime now = LocalDateTime.now();
 
         Event event = eventRepository.save(Event.builder()
+                .organizer(organizer)
                 .name("Festa Universitaria 2026")
                 .venue("Centro de Eventos, Orleans/SC")
                 .gateOpensAt(now.plusDays(2).minusHours(1))
