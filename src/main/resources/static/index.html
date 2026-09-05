@@ -11,7 +11,6 @@
 <main class="login">
     <section>
         <h1 class="brand">Portaria</h1>
-        <p class="lead">Venda de ingressos e controle de entrada.</p>
 
         <form id="form" novalidate>
             <div class="field">
@@ -27,8 +26,6 @@
         </form>
 
         <div id="msg" class="msg" role="alert" hidden></div>
-
-        <p class="hint" id="hint"></p>
     </section>
 </main>
 
@@ -38,12 +35,6 @@
     const form = document.querySelector('#form');
     const submit = document.querySelector('#submit');
     const msg = document.querySelector('#msg');
-
-    // as contas de demonstracao so existem sob o perfil dev
-    document.querySelector('#hint').innerHTML =
-        'Contas de demonstracao: <code>organizador@exemplo.com</code>, '
-        + '<code>portaria@exemplo.com</code> ou <code>comprador@exemplo.com</code>. '
-        + 'Senha <code>portaria-dev-2026</code>.';
 
     /** Cada papel tem uma tela. Quem acumula papeis cai na mais completa. */
     function destinationFor(roles) {

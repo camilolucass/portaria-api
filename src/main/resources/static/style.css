@@ -452,32 +452,11 @@ td.actions-cell {
     font-size: 1.35rem;
     font-weight: 700;
     letter-spacing: -0.02em;
-    margin: 0 0 var(--s1);
-}
-
-.login .lead {
-    color: var(--muted);
-    font-size: 0.9rem;
     margin: 0 0 var(--s5);
 }
 
 .login button[type="submit"] {
     width: 100%;
-}
-
-.hint {
-    font-size: 0.8rem;
-    color: var(--muted);
-    line-height: 1.6;
-    margin-top: var(--s4);
-    padding-top: var(--s4);
-    border-top: 1px solid var(--line);
-}
-
-.hint code {
-    background: var(--surface-2);
-    padding: 0.1rem 0.3rem;
-    border-radius: 4px;
 }
 
 /* ---------------------------------------------------------------- portaria */
