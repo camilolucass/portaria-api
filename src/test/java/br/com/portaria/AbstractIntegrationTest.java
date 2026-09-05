@@ -41,7 +41,7 @@ public abstract class AbstractIntegrationTest {
     /** Segredos de teste, fixos e obviamente falsos. Em producao vem do ambiente. */
     protected static final String QR_SECRET = "segredo-de-teste-com-mais-de-32-caracteres";
     protected static final String JWT_SECRET = "segredo-jwt-de-teste-com-mais-de-32-caracteres";
-    protected static final String WEBHOOK_SECRET = "segredo-de-webhook-de-teste";
+    protected static final String WEBHOOK_SECRET = "segredo-de-webhook-de-teste-com-mais-de-32-caracteres";
 
     @DynamicPropertySource
     static void applicationProperties(DynamicPropertyRegistry registry) {

@@ -23,11 +23,23 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 @RequestMapping("/api/v1/webhooks")
 public class PaymentWebhookController {
 
+    private static final int MINIMUM_SECRET_LENGTH = 32;
+
     private final PaymentWebhookService service;
     private final String secret;
 
+    /**
+     * O segredo e conferido aqui, e nao so no uso: com app.webhook.secret vazio,
+     * um cabecalho X-Webhook-Secret vazio passaria na comparacao e qualquer
+     * pessoa marcaria pedidos como pagos. Falhar na subida transforma um
+     * problema de configuracao silencioso em erro imediato.
+     */
     public PaymentWebhookController(PaymentWebhookService service,
                                     @Value("${app.webhook.secret}") String secret) {
+        if (secret == null || secret.length() < MINIMUM_SECRET_LENGTH) {
+            throw new IllegalStateException(
+                    "app.webhook.secret deve ter ao menos %d caracteres".formatted(MINIMUM_SECRET_LENGTH));
+        }
         this.service = service;
         this.secret = secret;
     }

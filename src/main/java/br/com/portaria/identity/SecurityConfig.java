@@ -55,6 +55,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        // o resto do actuator descreve o funcionamento interno da
+                        // aplicacao: nao e dado de negocio, mas tambem nao e para
+                        // qualquer conta autenticada
+                        .requestMatchers("/actuator/**").hasRole("ORGANIZER")
                         // o gateway nao faz login: quem protege esta rota e o
                         // segredo compartilhado conferido no controller
                         .requestMatchers(HttpMethod.POST, "/api/v1/webhooks/**").permitAll()

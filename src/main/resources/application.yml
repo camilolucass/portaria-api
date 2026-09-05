@@ -11,6 +11,13 @@ spring:
     open-in-view: false          # obrigatorio: forca o DTO a ser montado no service
   flyway:
     enabled: true
+  data:
+    web:
+      pageable:
+        default-page-size: 20
+        # sem teto, o padrao do Spring e 2000 itens por requisicao, e um
+        # ?size=2000 repetido pesa no banco de graca
+        max-page-size: 100
 
 app:
   jwt:

@@ -89,6 +89,13 @@ se o `GlobalExceptionHandler` não a tratar.
 antes de existir controller; `ProblemDetailSecurityHandlers` garante que essas
 duas respostas também sigam a RFC 7807.
 
+**Segredo sem validação na subida vira rota aberta.** `${WEBHOOK_SECRET:}` cai
+para string vazia quando a variável não existe, e a comparação em tempo
+constante do webhook aceitava um cabeçalho vazio contra um segredo vazio: sem
+login, qualquer pessoa marcava pedidos como pagos. O `docker compose` já recusava
+subir sem a variável, mas quem roda pela IDE não passa por ele. Os três segredos
+agora falham na construção do bean, e não no uso.
+
 **`@IdClass` não aceita `record`.** O JPA lê a chave no padrão JavaBean, e os
 acessores de um record não atendem.
 
