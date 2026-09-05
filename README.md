@@ -128,6 +128,27 @@ src/main/java/br/com/portaria/
 Um pacote por assunto, e não por camada. As migrations do banco ficam em
 `src/main/resources/db/migration`, e o front em `src/main/resources/static`.
 
+E as tabelas do banco:
+
+| Tabela | O que guarda |
+|---|---|
+| `event` | Os eventos, com o período e o status (`DRAFT` ou `PUBLISHED`) |
+| `ticket_batch` | Os lotes: preço, quantidade total e quantidade vendida |
+| `purchase_order` | Os pedidos, com prazo de expiração e status |
+| `order_holder` | Os titulares informados no pedido, antes de virarem ingresso |
+| `ticket` | Os ingressos emitidos, e o registro de quem entrou |
+| `payment_event` | As notificações do gateway que já foram processadas |
+| `buyer` | Os dados fiscais da compra |
+| `app_user` | As contas, com o hash da senha |
+| `user_role` | Os papéis de cada conta |
+| `event_staff` | Quais operadores validam ingresso de cada evento |
+
+`app_user` e `buyer` parecem repetidas, mas não são: a conta é quem comprou, e o
+`buyer` é o dado fiscal da compra, que pode legitimamente ser de outra pessoa.
+
+Existe ainda a `flyway_schema_history`, que o Flyway cria e mantém sozinho para
+saber quais migrations já rodaram.
+
 ## Notas
 
 O projeto roda em Java 25 com Spring Boot 4, enquanto a especificação pede
